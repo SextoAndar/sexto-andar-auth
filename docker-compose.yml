@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sexto-andar-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sexto_andar_db
+      POSTGRES_USER: sexto_andar_user
+      POSTGRES_PASSWORD: sexto_andar_pass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sexto-andar-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sexto_andar_user -d sexto_andar_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: sexto-andar-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://sexto_andar_user:sexto_andar_pass@postgres:5432/sexto_andar_db
+      SQL_DEBUG: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sexto-andar-network
+    volumes:
+      - ./app:/app/app:ro  # Mount app directory for development (read-only)
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sexto-andar-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@sextoandar.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+    networks:
+      - sexto-andar-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  sexto-andar-network:
+    driver: bridge
