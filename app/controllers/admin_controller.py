@@ -19,9 +19,10 @@ async def get_all_users(
     db: Session = Depends(get_db)
 ):
     """
-    Get all users and property owners (admin only)
+    Get paginated list of all users and property owners.
     
-    Returns paginated list of non-admin accounts
+    Excludes admin accounts from results.
+    Requires ADMIN role.
     """
     account_service = AccountService(db)
     return account_service.get_all_non_admin_accounts(page, size)
@@ -33,7 +34,9 @@ async def get_user_by_id(
     db: Session = Depends(get_db)
 ):
     """
-    Get user details by ID (admin only)
+    Get detailed user information by ID.
+    
+    Requires ADMIN role.
     """
     account_service = AccountService(db)
     return account_service.get_account_by_id(user_id)
@@ -46,7 +49,10 @@ async def update_user(
     db: Session = Depends(get_db)
 ):
     """
-    Update user information (admin only)
+    Update user profile information.
+    
+    Can modify name, email, and phone number.
+    Requires ADMIN role.
     """
     account_service = AccountService(db)
     return account_service.update_account(user_id, update_data)
@@ -58,7 +64,10 @@ async def delete_user(
     db: Session = Depends(get_db)
 ):
     """
-    Delete user account (admin only)
+    Permanently delete user account.
+    
+    Action cannot be undone.
+    Requires ADMIN role.
     """
     account_service = AccountService(db)
     account_service.delete_account(user_id)
@@ -72,7 +81,10 @@ async def change_user_password(
     db: Session = Depends(get_db)
 ):
     """
-    Change user password (admin only)
+    Change user password with current password verification.
+    
+    Requires current password for security.
+    Requires ADMIN role.
     """
     account_service = AccountService(db)
     account_service.change_user_password(user_id, password_data)

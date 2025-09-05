@@ -9,16 +9,21 @@ from app.auth.jwt_handler import get_token_expiry
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
-@router.post("/login", response_model=LoginResponse)
+@router.post("/login", response_model=LoginResponse, summary="User Login")
 async def login(
     response: Response,
     login_data: LoginRequest,
     db: Session = Depends(get_db)
 ):
     """
-    User login endpoint
+    Authenticate user credentials and establish secure session.
     
-    Authenticates user and sets JWT cookie
+    - Validates username and password against database
+    - Generates JWT token with 30-minute expiry
+    - Sets secure HTTP-only cookie
+    - Returns user profile and access token
+    
+    Supports USER, PROPERTY_OWNER, and ADMIN roles.
     """
     auth_service = AuthService(db)
     
@@ -50,40 +55,50 @@ async def login(
         user=user_data.model_dump()
     )
 
-@router.post("/register/user", response_model=AuthUser, status_code=status.HTTP_201_CREATED)
+@router.post("/register/user", response_model=AuthUser, status_code=status.HTTP_201_CREATED, summary="Register User")
 async def register_user(
     register_data: RegisterUserRequest,
     db: Session = Depends(get_db)
 ):
     """
-    User registration endpoint
+    Create new USER account with basic permissions.
     
-    Creates a new USER account
+    - Browse properties and schedule visits
+    - Make purchase/rental proposals
+    - Manage personal profile
+    
+    Requires unique username and email.
     """
     auth_service = AuthService(db)
     user = auth_service.register_user(register_data)
     return AuthUser.model_validate(user)
 
-@router.post("/register/property-owner", response_model=AuthUser, status_code=status.HTTP_201_CREATED)
+@router.post("/register/property-owner", response_model=AuthUser, status_code=status.HTTP_201_CREATED, summary="Register Property Owner")
 async def register_property_owner(
     register_data: RegisterPropertyOwnerRequest,
     db: Session = Depends(get_db)
 ):
     """
-    Property owner registration endpoint
+    Create new PROPERTY_OWNER account with property management permissions.
     
-    Creates a new PROPERTY_OWNER account
+    - List and manage property portfolio
+    - Handle visit requests and proposals
+    - Access advanced dashboard and analytics
+    
+    Requires unique username and email.
     """
     auth_service = AuthService(db)
     owner = auth_service.register_property_owner(register_data)
     return AuthUser.model_validate(owner)
 
-@router.post("/logout")
+@router.post("/logout", summary="User Logout")
 async def logout(response: Response):
     """
-    User logout endpoint
+    Terminate user session by clearing authentication cookie.
     
-    Clears the JWT cookie
+    - Removes access token from browser
+    - Invalidates client-side session
+    - Safe to call multiple times
     """
     response.delete_cookie(
         key="access_token",

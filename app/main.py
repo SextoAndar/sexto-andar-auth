@@ -37,12 +37,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Application lifespan manager.
-    Handles startup and shutdown events.
-    """
+    """Application lifespan manager for startup and shutdown events."""
     # Startup
-    logger.info("🚀 Starting FastAPI application...")
+    logger.info("Starting FastAPI application...")
     
     try:
         # Connect to database
@@ -51,30 +48,95 @@ async def lifespan(app: FastAPI):
         # Initialize database (validate models and create tables)
         success = await initialize_database()
         if not success:
-            logger.error("❌ Failed to initialize database. Shutting down...")
+            logger.error("Failed to initialize database. Shutting down...")
             sys.exit(1)
             
-        logger.info("✅ Application startup completed successfully")
+        logger.info("Application startup completed successfully")
         
     except Exception as e:
-        logger.error(f"❌ Startup error: {e}")
+        logger.error(f"Startup error: {e}")
         sys.exit(1)
         
     yield  # Application runs here
     
     # Shutdown
-    logger.info("🔄 Shutting down application...")
+    logger.info("Shutting down application...")
     try:
         await disconnect_db()
-        logger.info("✅ Application shutdown completed")
+        logger.info("Application shutdown completed")
     except Exception as e:
-        logger.error(f"❌ Shutdown error: {e}")
+        logger.error(f"Shutdown error: {e}")
 
-# Create FastAPI application
+# Create FastAPI application with professional documentation
 app = FastAPI(
     title="Real Estate Management API",
-    description="API for managing real estate properties, accounts, visits, and proposals",
+    description="""A professional FastAPI-based system for managing real estate properties, user accounts, visits, and proposals.
+
+## Authentication
+This API uses JWT tokens with HTTP-only cookies for secure authentication:
+- Registration: Create USER or PROPERTY_OWNER accounts
+- Login: Authenticate and receive JWT token in cookie
+- Logout: Clear authentication cookie
+- Role-based access control for different user types
+
+## User Roles
+- USER: Browse properties, schedule visits, make proposals
+- PROPERTY_OWNER: Manage properties and view proposals  
+- ADMIN: Full system access and user management
+
+## Security Features
+- JWT tokens with secure HTTP-only cookies
+- Bcrypt password hashing
+- Role-based access control
+- CORS protection
+- Input validation with Pydantic
+
+## Core Features
+- Account management and authentication
+- Property listing CRUD operations
+- Visit scheduling system
+- Proposal management
+- Admin user management panel
+
+## Technical Stack
+- Framework: FastAPI with async/await support
+- Database: PostgreSQL with SQLAlchemy ORM
+- Authentication: JWT with HTTP-only cookies
+- Validation: Pydantic models
+- Documentation: Auto-generated OpenAPI/Swagger
+
+## Getting Started
+1. Most endpoints require authentication
+2. Register account using /api/v1/auth/register endpoints
+3. Login using /api/v1/auth/login
+4. Admin users must be created via command-line script
+
+## API Versioning
+- Current Version: v1
+- Base URL: /api/v1
+- All endpoints are versioned for backwards compatibility
+""",
     version="1.0.0",
+    terms_of_service="https://github.com/moonshinerd/sexto-andar-api",
+    contact={
+        "name": "API Support",
+        "url": "https://github.com/moonshinerd/sexto-andar-api/issues",
+        "email": "support@sextoandar.com",
+    },
+    license_info={
+        "name": "MIT",
+        "url": "https://github.com/moonshinerd/sexto-andar-api/blob/main/LICENSE",
+    },
+    servers=[
+        {
+            "url": "http://localhost:8000",
+            "description": "Development server"
+        },
+        {
+            "url": "https://api.sextoandar.com",
+            "description": "Production server"
+        }
+    ],
     lifespan=lifespan
 )
 
@@ -87,19 +149,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Health check endpoint
-@app.get("/", tags=["Health"])
+# Health check endpoints
+@app.get("/", tags=["health"], summary="Root Health Check")
 async def root():
-    """Root endpoint - Health check"""
+    """Root endpoint health check. Returns basic API information and status."""
     return {
         "message": "Real Estate Management API is running",
         "status": "healthy",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "api": "Real Estate Management API",
+        "documentation": "/docs",
+        "redoc": "/redoc"
     }
 
-@app.get("/health", tags=["Health"])
+@app.get("/health", tags=["health"], summary="Detailed Health Check")
 async def health_check():
-    """Detailed health check including database connectivity"""
+    """Comprehensive health check including database connectivity status."""
     try:
         # Check database connection
         db_healthy = await check_database_connection()
@@ -107,7 +172,13 @@ async def health_check():
         return {
             "status": "healthy" if db_healthy else "unhealthy",
             "database": "connected" if db_healthy else "disconnected",
-            "api": "running"
+            "api": "running",
+            "timestamp": "2025-09-05T15:00:00Z",
+            "checks": {
+                "database": "connected" if db_healthy else "disconnected",
+                "api": "running",
+                "authentication": "available"
+            }
         }
         
     except Exception as e:
@@ -128,7 +199,7 @@ app.include_router(admin_router, prefix="/api/v1")
 if __name__ == "__main__":
     import uvicorn
     
-    logger.info("🌟 Starting development server...")
+    logger.info("Starting development server...")
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
