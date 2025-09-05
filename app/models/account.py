@@ -12,8 +12,9 @@ from app.database.connection import BaseModel
 
 class RoleEnum(enum.Enum):
     """Enum for system roles"""
-    USER = "user"
-    PROPERTY_OWNER = "property_owner"
+    USER = "USER"
+    PROPERTY_OWNER = "PROPERTY_OWNER"
+    ADMIN = "ADMIN"
 
 class Account(BaseModel):
     """
@@ -44,7 +45,7 @@ class Account(BaseModel):
     
     phoneNumber = Column(
         String(20),
-        nullable=False
+        nullable=True
     )
     
     email = Column(
@@ -109,9 +110,9 @@ class Account(BaseModel):
     @validates('phoneNumber')
     def validate_phone(self, key, phone):
         """Phone number validation"""
-        if not phone:
-            raise ValueError("Phone number is required")
-        
+        if phone is None:
+            return phone  # Allow null values
+            
         # Remove non-numeric characters for validation
         clean_phone = re.sub(r'\D', '', phone)
         if len(clean_phone) < 10 or len(clean_phone) > 15:
@@ -141,7 +142,7 @@ class Account(BaseModel):
             try:
                 return RoleEnum(role)
             except ValueError:
-                raise ValueError(f"Role must be '{RoleEnum.USER.value}' or '{RoleEnum.PROPERTY_OWNER.value}'")
+                raise ValueError(f"Role must be '{RoleEnum.USER.value}', '{RoleEnum.PROPERTY_OWNER.value}' or '{RoleEnum.ADMIN.value}'")
         
         return role
     
@@ -154,11 +155,16 @@ class Account(BaseModel):
         """Check if it's a property owner"""
         return self.role == RoleEnum.PROPERTY_OWNER
     
+    def is_admin(self) -> bool:
+        """Check if it's an admin"""
+        return self.role == RoleEnum.ADMIN
+    
     def get_role_display(self) -> str:
         """Returns the role name for display"""
         role_names = {
             RoleEnum.USER: "User",
-            RoleEnum.PROPERTY_OWNER: "Property Owner"
+            RoleEnum.PROPERTY_OWNER: "Property Owner",
+            RoleEnum.ADMIN: "Administrator"
         }
         return role_names.get(self.role, "Unknown")
     

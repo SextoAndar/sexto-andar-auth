@@ -104,13 +104,11 @@ class Proposal(BaseModel):
     
     # Relationships
     property = relationship(
-        "Property",
-        back_populates="proposals"
+        "Property"
     )
     
     user = relationship(
         "Account",
-        back_populates="proposals",
         foreign_keys=[idUser]
     )
     

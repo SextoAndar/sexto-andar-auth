@@ -20,6 +20,10 @@ from app.database.connection import (
 # Import models (this ensures they are registered with SQLAlchemy)
 from app.models import Account, Property, Address, Visit, Proposal
 
+# Import controllers/routers
+from app.controllers.auth_controller import router as auth_router
+from app.controllers.admin_controller import router as admin_router
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -116,6 +120,10 @@ async def health_check():
 # app.include_router(properties.router, prefix="/api/v1/properties", tags=["Properties"])
 # app.include_router(visits.router, prefix="/api/v1/visits", tags=["Visits"])
 # app.include_router(proposals.router, prefix="/api/v1/proposals", tags=["Proposals"])
+
+# Include API Routes
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1")
 
 if __name__ == "__main__":
     import uvicorn

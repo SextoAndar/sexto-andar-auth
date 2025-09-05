@@ -83,13 +83,11 @@ class Visit(BaseModel):
     
     # Relationships
     property = relationship(
-        "Property",
-        back_populates="visits"
+        "Property"
     )
     
     user = relationship(
         "Account",
-        back_populates="visits",
         foreign_keys=[idUser]
     )
     

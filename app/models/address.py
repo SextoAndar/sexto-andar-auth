@@ -50,7 +50,6 @@ class Address(BaseModel):
     # 1:1 relationship with Property
     property = relationship(
         "Property",
-        back_populates="address",
         uselist=False
     )
     

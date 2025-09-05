@@ -127,14 +127,12 @@ class Property(BaseModel):
     # Relationship with PropertyOwner (Account)
     property_owner = relationship(
         "Account",
-        back_populates="properties",
         foreign_keys=[idPropertyOwner]
     )
     
     # Relationship with Address (1:1 composition)
     address = relationship(
         "Address",
-        back_populates="property",
         cascade="all, delete-orphan",
         single_parent=True
     )
@@ -142,14 +140,12 @@ class Property(BaseModel):
     # Relationship with Visits
     visits = relationship(
         "Visit",
-        back_populates="property",
         cascade="all, delete-orphan"
     )
     
     # Relationship with Proposals
     proposals = relationship(
         "Proposal",
-        back_populates="property",
         cascade="all, delete-orphan"
     )
     
