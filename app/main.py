@@ -13,7 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database.connection import (
     connect_db, 
     disconnect_db, 
-    initialize_database, 
     check_database_connection
 )
 
@@ -45,10 +44,10 @@ async def lifespan(app: FastAPI):
         # Connect to database
         await connect_db()
         
-        # Initialize database (validate models and create tables)
-        success = await initialize_database()
-        if not success:
-            logger.error("Failed to initialize database. Shutting down...")
+        # Verify database connection
+        if not await check_database_connection():
+            logger.error("Database connection failed. Please run migration script first.")
+            logger.error("Run: python scripts/migrate_database.py")
             sys.exit(1)
             
         logger.info("Application startup completed successfully")
@@ -106,10 +105,11 @@ This API uses JWT tokens with HTTP-only cookies for secure authentication:
 - Documentation: Auto-generated OpenAPI/Swagger
 
 ## Getting Started
-1. Most endpoints require authentication
-2. Register account using /api/v1/auth/register endpoints
-3. Login using /api/v1/auth/login
-4. Admin users must be created via command-line script
+1. Run database migrations: python scripts/migrate_database.py
+2. Most endpoints require authentication
+3. Register account using /api/v1/auth/register endpoints
+4. Login using /api/v1/auth/login
+5. Admin users must be created via command-line script
 
 ## API Versioning
 - Current Version: v1

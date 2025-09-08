@@ -111,7 +111,7 @@ class Proposal(BaseModel):
         "Account",
         foreign_keys=[idUser]
     )
-    
+
     # Validations
     @validates('proposalValue')
     def validate_proposal_value(self, key, value):
@@ -126,7 +126,7 @@ class Proposal(BaseModel):
             raise ValueError("Proposal value too high")
         
         return value
-    
+
     @validates('message')
     def validate_message(self, key, message):
         """Message validation"""
@@ -134,7 +134,7 @@ class Proposal(BaseModel):
             raise ValueError("Message must have at most 1000 characters")
         
         return message.strip() if message else message
-    
+
     @validates('response_message')
     def validate_response_message(self, key, message):
         """Response message validation"""
@@ -142,7 +142,7 @@ class Proposal(BaseModel):
             raise ValueError("Response message must have at most 500 characters")
         
         return message.strip() if message else message
-    
+
     @validates('expires_at')
     def validate_expires_at(self, key, expires_at):
         """Expiration date validation"""
@@ -150,7 +150,7 @@ class Proposal(BaseModel):
             raise ValueError("Expiration date must be in the future")
         
         return expires_at
-    
+
     def __init__(self, **kwargs):
         """Constructor with automatic expiration setup"""
         super().__init__(**kwargs)
@@ -158,7 +158,7 @@ class Proposal(BaseModel):
         # If no expiration defined, set to 30 days
         if not self.expires_at:
             self.expires_at = datetime.now(timezone.utc) + timedelta(days=30)
-    
+
     # Convenience methods
     def is_pending(self) -> bool:
         """Check if proposal is pending"""
