@@ -4,8 +4,18 @@ from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
 from app.services.auth_service import AuthService
-from app.dtos.auth_dto import LoginRequest, LoginResponse, RegisterUserRequest, RegisterPropertyOwnerRequest, AuthUser
-from app.auth.jwt_handler import get_token_expiry
+from app.dtos.auth_dto import (
+    LoginRequest,
+    LoginResponse,
+    RegisterUserRequest,
+    RegisterPropertyOwnerRequest,
+    AuthUser,
+    IntrospectRequest,
+    IntrospectResponse,
+)
+from app.auth.jwt_handler import get_token_expiry, verify_token
+from app.auth.dependencies import get_current_user
+from app.models.account import Account
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -107,3 +117,21 @@ async def logout(response: Response):
         samesite="lax"
     )
     return {"message": "Successfully logged out"}
+
+@router.get("/me", response_model=AuthUser, summary="Get current authenticated user")
+async def me(current_user: Account = Depends(get_current_user)):
+    """
+    Returns the currently authenticated user resolved via JWT cookie.
+    """
+    return AuthUser.model_validate(current_user)
+
+@router.post("/introspect", response_model=IntrospectResponse, summary="Validate and decode a JWT token")
+async def introspect(body: IntrospectRequest) -> IntrospectResponse:
+    """
+    Validates a JWT token and returns whether it's active plus claims when valid.
+    Intended for service-to-service checks.
+    """
+    payload = verify_token(body.token)
+    if not payload:
+        return IntrospectResponse(active=False, reason="invalid_or_expired")
+    return IntrospectResponse(active=True, claims=payload)

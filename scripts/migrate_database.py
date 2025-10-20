@@ -99,8 +99,8 @@ def check_database_status():
         tables = inspector.get_table_names()
         logger.info(f"Existing tables: {tables}")
         
-        # Check if main tables exist
-        required_tables = ['accounts', 'properties', 'addresses', 'visits', 'proposals']
+        # Check if required tables exist (auth-only)
+        required_tables = ['accounts']
         missing_tables = [table for table in required_tables if table not in tables]
         
         if missing_tables:

@@ -14,6 +14,7 @@ from sqlalchemy.pool import NullPool
 from sqlalchemy.exc import SQLAlchemyError
 import asyncpg
 from databases import Database
+import asyncio
 
 # Database configurations
 DATABASE_URL = os.getenv(
@@ -141,6 +142,29 @@ async def disconnect_db():
     """Disconnect from database (use on application shutdown)"""
     await database.disconnect()
     logging.info("📴 Disconnected from PostgreSQL database")
+
+async def wait_for_database_ready(max_attempts: int = None, delay_seconds: float = None) -> bool:
+    """
+    Wait until the database is reachable. Useful when this service starts after another
+    stack component that already brought up the DB. Reads overrides from env vars:
+    DB_READY_MAX_ATTEMPTS, DB_READY_DELAY_SECONDS.
+    """
+    attempts = int(os.getenv("DB_READY_MAX_ATTEMPTS", str(max_attempts or 30)))
+    delay = float(os.getenv("DB_READY_DELAY_SECONDS", str(delay_seconds or 1.0)))
+    logger = logging.getLogger(__name__)
+    for attempt in range(1, attempts + 1):
+        try:
+            if not database.is_connected:
+                await database.connect()
+            # Simple probe
+            await database.fetch_val("SELECT 1")
+            logger.info("✅ Database is ready (attempt %d/%d)", attempt, attempts)
+            return True
+        except Exception as e:
+            logger.warning("⏳ Waiting for database... attempt %d/%d (%s)", attempt, attempts, e)
+            await asyncio.sleep(delay)
+    logger.error("❌ Database not ready after %d attempts", attempts)
+    return False
 
 # Function to create all tables
 def create_tables():
@@ -276,8 +300,8 @@ def update_constraints_and_indexes(session, inspector):
 def validate_models():
     """Validate all SQLAlchemy models"""
     try:
-        # Import all models to ensure they're registered with Base
-        from ..models import account, property, address, visit, proposal
+        # Import models to ensure they're registered with Base (auth-only)
+        from ..models import account
         
         # Get inspector to check database structure
         inspector = inspect(engine)

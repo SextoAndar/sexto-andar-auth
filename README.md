@@ -1,6 +1,6 @@
-# Real Estate Management API
+# Auth Service API
 
-Uma API FastAPI profissional para gerenciamento de imóveis, contas de usuário, visitas e propostas.
+Serviço FastAPI focado exclusivamente em autenticação: registro, login, logout e gerenciamento de sessão via JWT em cookies HTTP-only.
 
 ## 🚀 Início Rápido
 
@@ -108,28 +108,23 @@ python scripts/migrate_database.py --check
 
 ```
 app/
-├── controllers/          # Endpoints da API
-├── services/            # Lógica de negócio  
-├── repositories/        # Acesso a dados
-├── models/             # Modelos SQLAlchemy
-├── dtos/               # Data Transfer Objects
-├── database/           # Configuração do banco
-└── main.py            # Aplicação principal
+├── controllers/          # Endpoints de autenticação
+├── services/             # Lógica de autenticação
+├── repositories/         # Acesso a dados (contas)
+├── models/               # Modelos (apenas Account)
+├── dtos/                 # DTOs de autenticação
+├── database/             # Configuração do banco
+└── main.py               # Aplicação principal
 
-scripts/                 # Scripts utilitários
-├── migrate_database.py  # Migração do banco
-├── create_admin.py     # Criação de admin
-└── README.md          # Documentação dos scripts
+scripts/                  # Scripts utilitários
+├── migrate_database.py   # Migração do banco (tabela accounts)
+├── create_admin.py       # Criação de admin
+└── README.md             # Documentação dos scripts
 ```
 
 ## 🔐 Autenticação
 
-A API utiliza JWT tokens com cookies HTTP-only seguros:
-
-### Tipos de Usuário
-- **USER**: Navegar imóveis, agendar visitas, fazer propostas
-- **PROPERTY_OWNER**: Gerenciar imóveis próprios e visualizar propostas
-- **ADMIN**: Acesso completo ao sistema
+A API utiliza JWT com cookies HTTP-only seguros. Perfis suportados: `USER`, `PROPERTY_OWNER`, `ADMIN` (apenas para gestão de contas).
 
 ### Endpoints Principais
 - `POST /api/v1/auth/register/user` - Registro de usuário

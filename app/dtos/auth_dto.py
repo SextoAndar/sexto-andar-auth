@@ -1,6 +1,6 @@
 # app/dtos/auth_dto.py
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, Union
+from typing import Optional, Union, Dict, Any
 from datetime import datetime
 import uuid
 
@@ -49,3 +49,13 @@ class AuthUser(BaseModel):
         if isinstance(data.get('id'), uuid.UUID):
             data['id'] = str(data['id'])
         return data
+
+class IntrospectRequest(BaseModel):
+    """Request DTO for token introspection"""
+    token: str = Field(..., min_length=10)
+
+class IntrospectResponse(BaseModel):
+    """Response DTO for token introspection"""
+    active: bool
+    claims: Optional[Dict[str, Any]] = None
+    reason: Optional[str] = None

@@ -13,15 +13,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database.connection import (
     connect_db, 
     disconnect_db, 
-    check_database_connection
+    check_database_connection,
+    wait_for_database_ready
 )
 
-# Import models (this ensures they are registered with SQLAlchemy)
-from app.models import Account, Property, Address, Visit, Proposal
+# Import models (register only auth-related models)
+from app.models import Account
 
-# Import controllers/routers
+# Import controllers/routers (auth only)
 from app.controllers.auth_controller import router as auth_router
-from app.controllers.admin_controller import router as admin_router
 
 # Configure logging
 logging.basicConfig(
@@ -41,14 +41,13 @@ async def lifespan(app: FastAPI):
     logger.info("Starting FastAPI application...")
     
     try:
-        # Connect to database
-        await connect_db()
-        
-        # Verify database connection
-        if not await check_database_connection():
+        # Wait for DB to be ready (shared DB may already be up)
+        if not await wait_for_database_ready():
             logger.error("Database connection failed. Please run migration script first.")
             logger.error("Run: python scripts/migrate_database.py")
             sys.exit(1)
+        # ensure connection handle is open
+        await connect_db()
             
         logger.info("Application startup completed successfully")
         
@@ -68,73 +67,31 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI application with professional documentation
 app = FastAPI(
-    title="Real Estate Management API",
-    description="""A professional FastAPI-based system for managing real estate properties, user accounts, visits, and proposals.
+    title="Auth Service API",
+    description="""Auth-only service providing account registration, login, logout, and JWT-based session management.
 
 ## Authentication
-This API uses JWT tokens with HTTP-only cookies for secure authentication:
 - Registration: Create USER or PROPERTY_OWNER accounts
 - Login: Authenticate and receive JWT token in cookie
 - Logout: Clear authentication cookie
-- Role-based access control for different user types
-
-## User Roles
-- USER: Browse properties, schedule visits, make proposals
-- PROPERTY_OWNER: Manage properties and view proposals  
-- ADMIN: Full system access and user management
-
-## Security Features
-- JWT tokens with secure HTTP-only cookies
-- Bcrypt password hashing
-- Role-based access control
-- CORS protection
-- Input validation with Pydantic
-
-## Core Features
-- Account management and authentication
-- Property listing CRUD operations
-- Visit scheduling system
-- Proposal management
-- Admin user management panel
+- Role-based access control via JWT claims
 
 ## Technical Stack
 - Framework: FastAPI with async/await support
 - Database: PostgreSQL with SQLAlchemy ORM
 - Authentication: JWT with HTTP-only cookies
 - Validation: Pydantic models
-- Documentation: Auto-generated OpenAPI/Swagger
 
 ## Getting Started
 1. Run database migrations: python scripts/migrate_database.py
-2. Most endpoints require authentication
-3. Register account using /api/v1/auth/register endpoints
-4. Login using /api/v1/auth/login
-5. Admin users must be created via command-line script
-
-## API Versioning
-- Current Version: v1
-- Base URL: /api/v1
-- All endpoints are versioned for backwards compatibility
+2. Register using /api/v1/auth/register endpoints
+3. Login using /api/v1/auth/login
 """,
     version="1.0.0",
-    terms_of_service="https://github.com/moonshinerd/sexto-andar-api",
-    contact={
-        "name": "API Support",
-        "url": "https://github.com/moonshinerd/sexto-andar-api/issues",
-        "email": "support@sextoandar.com",
-    },
-    license_info={
-        "name": "MIT",
-        "url": "https://github.com/moonshinerd/sexto-andar-api/blob/main/LICENSE",
-    },
     servers=[
         {
             "url": "http://localhost:8000",
             "description": "Development server"
-        },
-        {
-            "url": "https://api.sextoandar.com",
-            "description": "Production server"
         }
     ],
     lifespan=lifespan
@@ -154,10 +111,10 @@ app.add_middleware(
 async def root():
     """Root endpoint health check. Returns basic API information and status."""
     return {
-        "message": "Real Estate Management API is running",
+        "message": "Auth Service API is running",
         "status": "healthy",
         "version": "1.0.0",
-        "api": "Real Estate Management API",
+        "api": "Auth Service API",
         "documentation": "/docs",
         "redoc": "/redoc"
     }
@@ -173,7 +130,6 @@ async def health_check():
             "status": "healthy" if db_healthy else "unhealthy",
             "database": "connected" if db_healthy else "disconnected",
             "api": "running",
-            "timestamp": "2025-09-05T15:00:00Z",
             "checks": {
                 "database": "connected" if db_healthy else "disconnected",
                 "api": "running",
@@ -192,9 +148,8 @@ async def health_check():
 # app.include_router(visits.router, prefix="/api/v1/visits", tags=["Visits"])
 # app.include_router(proposals.router, prefix="/api/v1/proposals", tags=["Proposals"])
 
-# Include API Routes
+# Include API Routes (auth only)
 app.include_router(auth_router, prefix="/api/v1")
-app.include_router(admin_router, prefix="/api/v1")
 
 if __name__ == "__main__":
     import uvicorn
