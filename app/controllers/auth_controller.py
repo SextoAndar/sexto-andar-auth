@@ -9,6 +9,7 @@ from app.dtos.auth_dto import (
     LoginResponse,
     RegisterUserRequest,
     RegisterPropertyOwnerRequest,
+    RegisterAdminRequest,
     AuthUser,
     IntrospectRequest,
     IntrospectResponse,
@@ -100,6 +101,51 @@ async def register_property_owner(
     auth_service = AuthService(db)
     owner = auth_service.register_property_owner(register_data)
     return AuthUser.model_validate(owner)
+
+@router.post("/admin/create-admin", response_model=AuthUser, status_code=status.HTTP_201_CREATED, summary="Create Admin User (Admin Only)")
+async def create_admin(
+    register_data: RegisterAdminRequest,
+    current_admin: Account = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create new ADMIN account. **Requires existing admin authentication.**
+    
+    Security features:
+    - Requires valid admin JWT token
+    - Only users with ADMIN role can access
+    - Logs action for audit trail
+    - Validates unique username/email
+    - Recommended: Add rate limiting in production
+    
+    The creator admin information is logged for security auditing.
+    """
+    auth_service = AuthService(db)
+    new_admin = auth_service.register_admin(register_data, current_admin)
+    return AuthUser.model_validate(new_admin)
+
+@router.delete("/admin/delete-admin/{admin_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete Admin User (Admin Only)")
+async def delete_admin(
+    admin_id: str,
+    current_admin: Account = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete an ADMIN account. **Requires existing admin authentication.**
+    
+    Security features:
+    - Requires valid admin JWT token
+    - Only users with ADMIN role can access
+    - Cannot delete yourself (prevents lockout)
+    - Cannot delete the last admin in the system
+    - Logs action for audit trail
+    - Validates target is actually an admin
+    
+    Returns 204 No Content on success.
+    """
+    auth_service = AuthService(db)
+    auth_service.delete_admin(admin_id, current_admin)
+    return None
 
 @router.post("/logout", summary="User Logout")
 async def logout(response: Response):

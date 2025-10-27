@@ -31,6 +31,14 @@ class RegisterPropertyOwnerRequest(BaseModel):
     phoneNumber: str = Field(..., min_length=10, max_length=20)
     password: str = Field(..., min_length=8)
 
+class RegisterAdminRequest(BaseModel):
+    """Admin registration request DTO (only via authenticated admin)"""
+    username: str = Field(..., min_length=3, max_length=50)
+    fullName: str = Field(..., min_length=2, max_length=100)
+    email: EmailStr
+    phoneNumber: str = Field(..., min_length=10, max_length=20)
+    password: str = Field(..., min_length=8)
+
 class AuthUser(BaseModel):
     """Authenticated user DTO"""
     id: Union[str, uuid.UUID]

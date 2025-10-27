@@ -41,6 +41,28 @@ class AccountRepository:
         self.db.delete(account)
         self.db.commit()
     
+    def delete_by_id(self, account_id: str) -> bool:
+        """
+        Delete account by ID
+        
+        Args:
+            account_id: UUID of the account to delete
+            
+        Returns:
+            True if account was deleted, False if not found
+        """
+        account = self.get_by_id(account_id)
+        if not account:
+            return False
+        
+        self.db.delete(account)
+        self.db.commit()
+        return True
+    
+    def count_admins(self) -> int:
+        """Count total number of admin accounts"""
+        return self.db.query(Account).filter(Account.role == RoleEnum.ADMIN).count()
+    
     def get_all_paginated(self, page: int = 1, size: int = 10, role_filter: Optional[RoleEnum] = None) -> Tuple[List[Account], int]:
         """
         Get all accounts with pagination
