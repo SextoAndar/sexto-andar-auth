@@ -22,7 +22,7 @@ class Settings:
     """
     
     # Default values
-    _API_BASE_PATH: str = "/api"
+    _API_BASE_PATH: str = "/"
     _JWT_SECRET_KEY: str = "your-super-secret-key-change-in-production"
     _JWT_ALGORITHM: str = "HS256"
     _JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
@@ -31,7 +31,9 @@ class Settings:
         """Initialize configuration by reading from .env if available."""
         
         # ===== API Configuration =====
-        self.API_BASE_PATH: str = os.getenv("API_BASE_PATH", self._API_BASE_PATH).rstrip('/')
+        api_base_path = os.getenv("API_BASE_PATH", self._API_BASE_PATH)
+        # If empty string, use "/" (root), otherwise strip trailing slashes
+        self.API_BASE_PATH: str = "/" if api_base_path == "" else api_base_path.rstrip('/')
         
         # ===== JWT Configuration =====
         self.JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", self._JWT_SECRET_KEY)
@@ -77,15 +79,26 @@ class Settings:
             route: The route path (e.g., "auth/login" or "/auth/login")
         
         Returns:
-            Full route path (e.g., "/api/auth/login")
+            Full route path (e.g., "/api/auth/login" or "/auth/login" if API_BASE_PATH is "/")
         
         Example:
+            # With API_BASE_PATH="/api"
             settings.api_route("auth/login") -> "/api/auth/login"
             settings.api_route("/auth/login") -> "/api/auth/login"
+            
+            # With API_BASE_PATH="/" (root)
+            settings.api_route("auth/login") -> "/auth/login"
+            settings.api_route("/auth/login") -> "/auth/login"
         """
         if not route:
             return self.API_BASE_PATH
+        
         clean_route = route.lstrip('/')
+        
+        # If API_BASE_PATH is empty or just "/", return route with leading slash
+        if not self.API_BASE_PATH or self.API_BASE_PATH == "/":
+            return f"/{clean_route}"
+        
         return f"{self.API_BASE_PATH}/{clean_route}"
 
 

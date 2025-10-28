@@ -59,15 +59,33 @@ class TestSettings:
         """Test api_route with empty string returns base path"""
         from app.settings import settings
         
-        assert settings.api_route("") == "/api"
+        assert settings.api_route("") == settings.API_BASE_PATH
     
     def test_api_route_with_multiple_slashes(self):
         """Test api_route removes duplicate slashes"""
         from app.settings import settings
         
         result = settings.api_route("/users")
-        assert result == "/api/users"
+        assert result == f"{settings.API_BASE_PATH}/users"
         assert "//" not in result or result.startswith("http")
+    
+    def test_empty_api_base_path_uses_root(self):
+        """Test that empty API_BASE_PATH in env results in '/' """
+        import os
+        original = os.environ.get("API_BASE_PATH")
+        
+        try:
+            # Set empty string
+            os.environ["API_BASE_PATH"] = ""
+            test_settings = Settings()
+            assert test_settings.API_BASE_PATH == "/"
+            assert test_settings.api_route("users") == "/users"
+        finally:
+            # Restore original value
+            if original is not None:
+                os.environ["API_BASE_PATH"] = original
+            elif "API_BASE_PATH" in os.environ:
+                del os.environ["API_BASE_PATH"]
     
     def test_settings_all_properties_accessible(self):
         """Test that all settings properties are accessible"""
