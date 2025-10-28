@@ -40,17 +40,17 @@ services:
       - ./scripts:/app/scripts:ro
     restart: "no"  # Only run once
 
-  api:
+  auth:
     build: 
       context: .
       dockerfile: Dockerfile
-    container_name: sexto-andar-api
+    container_name: sexto-andar-auth
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://sexto_andar_user:sexto_andar_pass@postgres:5432/sexto_andar_db
       SQL_DEBUG: "false"
     ports:
-      - "8000:8000"
+      - "8001:8001"
     depends_on:
       postgres:
         condition: service_healthy

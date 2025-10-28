@@ -54,9 +54,9 @@ docker-compose up
 ## 📖 Documentação da API
 
 Após iniciar a aplicação, acesse:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/health
+- **Swagger UI**: http://localhost:8001/docs
+- **ReDoc**: http://localhost:8001/redoc
+- **Health Check**: http://localhost:8001/health
 
 ## 🗄️ Gerenciamento do Banco de Dados
 
@@ -104,33 +104,91 @@ python scripts/migrate_database.py --check
 - **Validação**: Pydantic models
 - **Containerização**: Docker Compose
 
-### Estrutura do Projeto
+## �‍💼 Gerenciamento de Admins
 
-```
-app/
-├── controllers/          # Endpoints de autenticação
-├── services/             # Lógica de autenticação
-├── repositories/         # Acesso a dados (contas)
-├── models/               # Modelos (apenas Account)
-├── dtos/                 # DTOs de autenticação
-├── database/             # Configuração do banco
-└── main.py               # Aplicação principal
+### Criar Primeiro Admin (Bootstrap)
 
-scripts/                  # Scripts utilitários
-├── migrate_database.py   # Migração do banco (tabela accounts)
-├── create_admin.py       # Criação de admin
-└── README.md             # Documentação dos scripts
+Após iniciar os containers, crie o primeiro admin:
+
+```bash
+docker exec sexto-andar-auth python scripts/create_admin.py <username> "<full_name>" <email> <password> <phone>
 ```
 
-## 🔐 Autenticação
+**Exemplo:**
+```bash
+docker exec sexto-andar-auth python scripts/create_admin.py admin "Admin User" admin@example.com "@Admin11" 11999999999
+```
 
-A API utiliza JWT com cookies HTTP-only seguros. Perfis suportados: `USER`, `PROPERTY_OWNER`, `ADMIN` (apenas para gestão de contas).
+**Validações:**
+- Username: 3-50 caracteres (apenas letras, números e underscore)
+- Email: formato válido e único
+- Senha: mínimo 8 caracteres
+- Telefone: 10-15 dígitos
+
+**Saída esperada:**
+```
+✅ Admin user created successfully!
+
+👤 Admin Details:
+   ID: uuid-aqui
+   Username: admin
+   Full Name: Admin User
+   Email: admin@example.com
+   Role: Administrator
+   Created: 2025-10-28 06:35:22
+
+🎉 You can now login with these credentials!
+```
+
+### Criar Admins Adicionais via API
+
+Após ter um admin, crie novos admins via endpoint protegido:
+
+```bash
+# 1. Faça login como admin
+curl -X POST http://localhost:8001/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "@Admin11"
+  }' \
+  -c cookies.txt
+
+# 2. Crie novo admin (requer autenticação)
+curl -X POST http://localhost:8001/api/v1/auth/admin/create-admin \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "username": "admin2",
+    "fullName": "Segundo Admin",
+    "email": "admin2@example.com",
+    "phoneNumber": "11988776655",
+    "password": "senha123456"
+  }'
+```
+
+### Deletar Admins via API
+
+Apenas admins autenticados podem deletar outros admins (não podem deletar a si mesmos ou o último admin):
+
+```bash
+curl -X DELETE http://localhost:8001/api/v1/auth/admin/delete-admin/{admin_id} \
+  -b cookies.txt
+```
+
+---
+
+## �🔐 Autenticação
+
+A API utiliza JWT com cookies HTTP-only seguros. Perfis suportados: `USER`, `PROPERTY_OWNER`, `ADMIN`.
 
 ### Endpoints Principais
 - `POST /api/v1/auth/register/user` - Registro de usuário
 - `POST /api/v1/auth/register/property-owner` - Registro de proprietário
 - `POST /api/v1/auth/login` - Login
 - `POST /api/v1/auth/logout` - Logout
+- `POST /api/v1/auth/admin/create-admin` - Criar admin (admin only)
+- `DELETE /api/v1/auth/admin/delete-admin/{id}` - Deletar admin (admin only)
 
 ## 🛠️ Desenvolvimento
 
@@ -141,7 +199,7 @@ A API utiliza JWT com cookies HTTP-only seguros. Perfis suportados: `USER`, `PRO
 docker-compose up
 
 # Ou diretamente com Python (após migração)
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
 ### Após mudanças no modelo
@@ -198,7 +256,7 @@ Os logs são configurados para stdout e incluem:
 
 ### Serviços disponíveis:
 - **migrate**: Executa migrações automaticamente (roda uma vez e para)
-- **api**: Aplicação FastAPI (porta 8000) - depende da migração
+- **auth**: Aplicação FastAPI (porta 8001) - depende da migração
 - **postgres**: PostgreSQL 15 (porta 5432)
 - **pgadmin**: Interface web do PostgreSQL (porta 8080)
 
@@ -209,13 +267,16 @@ Os logs são configurados para stdout e incluem:
 docker-compose down
 
 # Ver logs de um serviço
-docker-compose logs api
+docker-compose logs auth
 
 # Reconstruir imagens
 docker-compose build
 
 # Executar apenas o banco
 docker-compose up -d postgres
+
+# Criar admin
+docker exec sexto-andar-auth python scripts/create_admin.py admin "Admin User" admin@example.com "@Admin11" 11999999999
 ```
 
 ## ⚠️ Importante
@@ -234,6 +295,6 @@ docker-compose up -d postgres
 
 ## 📞 Suporte
 
-- **Documentação**: http://localhost:8000/docs
+- **Documentação**: http://localhost:8001/docs
 - **Issues**: Abra uma issue no repositório
-- **Health Check**: http://localhost:8000/health
+- **Health Check**: http://localhost:8001/health

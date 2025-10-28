@@ -15,7 +15,7 @@ from app.dtos.auth_dto import (
     IntrospectResponse,
 )
 from app.auth.jwt_handler import get_token_expiry, verify_token
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, get_current_admin_user
 from app.models.account import Account
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
