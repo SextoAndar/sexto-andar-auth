@@ -255,5 +255,23 @@ docker-compose exec auth python scripts/migrate_database.py --force
 ## 📊 Monitoring
 
 - **Basic Status**: http://localhost:8001/
-- **Health Check**: http://localhost:8001/health
+- **Health Check**: http://localhost:8001/api/health
+- **Detailed Health**: http://localhost:8001/api/health/detailed
 - **Logs**: `docker-compose logs auth`
+
+## 🧪 Testing
+
+### Run all tests:
+```bash
+./run_tests.sh
+```
+
+Or using pytest directly:
+```bash
+python -m pytest tests/ -v
+```
+
+### Run with coverage:
+```bash
+python -m pytest tests/ --cov=app --cov-report=html
+```
