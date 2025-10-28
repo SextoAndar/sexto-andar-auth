@@ -14,11 +14,19 @@ FastAPI service focused exclusively on authentication: registration, login, logo
 git clone <your-repository>
 cd sexto-andar-auth
 
+# Copy environment template and customize if needed
+cp .env.example .env
+
+# Edit .env and set JWT_SECRET_KEY for production!
+# JWT_SECRET_KEY=your-random-secret-key-here
+
 # Start everything (migration runs automatically)
 docker-compose up --build -d
 ```
 
 The migration will run automatically before the API starts.
+
+**⚠️ IMPORTANT**: Change `JWT_SECRET_KEY` in `.env` before deploying to production!
 
 ## 📖 API Documentation
 
@@ -52,6 +60,44 @@ python scripts/migrate_database.py --force
 python scripts/migrate_database.py --check
 ```
 
+## ⚙️ Configuration
+
+### Environment Variables
+
+All configuration is managed via environment variables. Copy `.env.example` to `.env` and customize:
+
+```bash
+cp .env.example .env
+```
+
+**Key variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `API_BASE_PATH` | `/api` | Base path for all API routes (e.g., `/api/auth/login`) |
+| `JWT_SECRET_KEY` | `your-super-secret-key...` | **CRITICAL**: Change in production! Used to sign JWT tokens |
+| `JWT_ALGORITHM` | `HS256` | JWT signing algorithm |
+| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Token expiration time in minutes |
+| `DATABASE_URL` | `postgresql://...` | Full database connection string |
+| `SQL_DEBUG` | `false` | Enable SQL query logging (dev only) |
+| `DB_READY_MAX_ATTEMPTS` | `30` | Database connection retry attempts |
+| `DB_READY_DELAY_SECONDS` | `1.0` | Delay between retry attempts |
+
+**Production checklist:**
+- ✅ Set a strong random `JWT_SECRET_KEY`:
+  ```bash
+  # Generate a secure key
+  openssl rand -hex 32
+  # or
+  python -c "import secrets; print(secrets.token_hex(32))"
+  
+  # Add to .env
+  echo "JWT_SECRET_KEY=<your-generated-key>" >> .env
+  ```
+- ✅ Use secure database credentials
+- ✅ Set appropriate token expiration time
+- ✅ Disable `SQL_DEBUG`
+
 ## 🏗️ Architecture
 
 ### Technology Stack
@@ -61,6 +107,7 @@ python scripts/migrate_database.py --check
 - **Validation**: Pydantic models
 - **Password hashing**: bcrypt
 - **Containerization**: Docker Compose
+- **Configuration**: Centralized settings module with `.env` support
 
 ## 👨‍💼 Admin Management
 

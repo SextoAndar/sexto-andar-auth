@@ -15,18 +15,23 @@ class Settings:
     Application configuration - reads environment variables with sane defaults.
     
     Auth service configuration for:
+    - API routing (base path)
     - JWT authentication (secret, algorithm, expiration)
     - Database connection (PostgreSQL)
     - SQL debug logging
     """
     
     # Default values
+    _API_BASE_PATH: str = "/api"
     _JWT_SECRET_KEY: str = "your-super-secret-key-change-in-production"
     _JWT_ALGORITHM: str = "HS256"
     _JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     def __init__(self):
         """Initialize configuration by reading from .env if available."""
+        
+        # ===== API Configuration =====
+        self.API_BASE_PATH: str = os.getenv("API_BASE_PATH", self._API_BASE_PATH).rstrip('/')
         
         # ===== JWT Configuration =====
         self.JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", self._JWT_SECRET_KEY)
@@ -63,6 +68,25 @@ class Settings:
         
         # SQL logging
         self.SQL_DEBUG: bool = os.getenv("SQL_DEBUG", "false").lower() in ("true", "1", "yes")
+    
+    def api_route(self, route: str) -> str:
+        """
+        Compose a full route combining API_BASE_PATH + route.
+        
+        Args:
+            route: The route path (e.g., "auth/login" or "/auth/login")
+        
+        Returns:
+            Full route path (e.g., "/api/auth/login")
+        
+        Example:
+            settings.api_route("auth/login") -> "/api/auth/login"
+            settings.api_route("/auth/login") -> "/api/auth/login"
+        """
+        if not route:
+            return self.API_BASE_PATH
+        clean_route = route.lstrip('/')
+        return f"{self.API_BASE_PATH}/{clean_route}"
 
 
 # Global settings instance

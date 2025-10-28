@@ -6,7 +6,7 @@ Real Estate Management API
 import logging
 import sys
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import database functions
@@ -33,6 +33,9 @@ from app.config.api_docs import (
     API_CONTACT,
     API_LICENSE_INFO
 )
+
+# Import settings
+from app.settings import settings
 
 # Configure logging
 logging.basicConfig(
@@ -97,20 +100,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Health check endpoints
-@app.get("/", tags=["health"], summary="Root Health Check")
-async def root():
+# Create API Router with base path
+api_router = APIRouter(prefix=settings.API_BASE_PATH)
+
+# Health check endpoints under api_router
+@api_router.get("/health", tags=["health"], summary="Root Health Check")
+async def health_root():
     """Root endpoint health check. Returns basic API information and status."""
     return {
         "message": "Auth Service API is running",
         "status": "healthy",
         "version": API_VERSION,
         "api": API_TITLE,
-        "documentation": "/docs",
-        "redoc": "/redoc"
+        "documentation": f"{settings.API_BASE_PATH}/docs",
+        "redoc": f"{settings.API_BASE_PATH}/redoc"
     }
 
-@app.get("/health", tags=["health"], summary="Detailed Health Check")
+@api_router.get("/health/detailed", tags=["health"], summary="Detailed Health Check")
 async def health_check():
     """Comprehensive health check including database connectivity status."""
     try:
@@ -132,15 +138,28 @@ async def health_check():
         logger.error(f"Health check error: {e}")
         raise HTTPException(status_code=503, detail="Service unavailable")
 
-# API Routes will be added here
-# Example structure:
-# app.include_router(accounts.router, prefix="/api/v1/accounts", tags=["Accounts"])
-# app.include_router(properties.router, prefix="/api/v1/properties", tags=["Properties"])
-# app.include_router(visits.router, prefix="/api/v1/visits", tags=["Visits"])
-# app.include_router(proposals.router, prefix="/api/v1/proposals", tags=["Proposals"])
+# Include all API routes under the api_router
+# Auth router has prefix="/auth" internally, so full path will be {API_BASE_PATH}/auth/*
+# Example: with API_BASE_PATH="/api" -> /api/auth/login, /api/auth/register/user, etc.
+api_router.include_router(auth_router)
 
-# Include API Routes (auth only)
-app.include_router(auth_router, prefix="/api/v1")
+# Example structure for adding more routers:
+# api_router.include_router(accounts_router)
+# api_router.include_router(properties_router)
+
+# Include the main API router in the app
+app.include_router(api_router)
+
+# Root endpoint - Simple redirect or info
+@app.get("/", tags=["root"], summary="API Root", include_in_schema=False)
+async def root():
+    """Root endpoint - Returns API information."""
+    return {
+        "message": "Auth Service API",
+        "version": API_VERSION,
+        "docs": f"{settings.API_BASE_PATH}/docs",
+        "health": f"{settings.API_BASE_PATH}/health"
+    }
 
 if __name__ == "__main__":
     import uvicorn
