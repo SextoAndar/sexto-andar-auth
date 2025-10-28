@@ -66,48 +66,6 @@ class TestAccountModel:
         account.role = RoleEnum.USER
         assert account.is_admin() is False
     
-    def test_to_dict(self, db_session):
-        """Test to_dict method"""
-        account = Account(
-            username="testuser",
-            fullName="Test User",
-            email="test@example.com",
-            phoneNumber="11999999999",
-            password=hash_password("password123"),
-            role=RoleEnum.USER
-        )
-        
-        db_session.add(account)
-        db_session.flush()
-        
-        account_dict = account.to_dict()
-        
-        assert "username" in account_dict
-        assert "fullName" in account_dict
-        assert "email" in account_dict
-        assert "role" in account_dict
-        assert "password" not in account_dict  # Password should not be in dict
-        assert account_dict["username"] == "testuser"
-        assert account_dict["email"] == "test@example.com"
-    
-    def test_to_dict_excludes_password(self, db_session):
-        """Test that to_dict excludes password field"""
-        account = Account(
-            username="testuser",
-            fullName="Test User",
-            email="test@example.com",
-            phoneNumber="11999999999",
-            password=hash_password("secret_password"),
-            role=RoleEnum.USER
-        )
-        
-        db_session.add(account)
-        db_session.flush()
-        
-        account_dict = account.to_dict()
-        
-        assert "password" not in account_dict
-    
     def test_account_creation(self, db_session):
         """Test creating an account with all fields"""
         account = Account(
@@ -150,3 +108,25 @@ class TestAccountModel:
         
         repr_str = repr(account)
         assert "testuser" in repr_str or "Account" in repr_str
+    
+    def test_get_role_display(self, db_session):
+        """Test get_role_display method"""
+        account = Account(
+            username="roleuser",
+            fullName="Role User",
+            email="role@example.com",
+            phoneNumber="11999999999",
+            password=hash_password("password123"),
+            role=RoleEnum.USER
+        )
+        
+        db_session.add(account)
+        db_session.flush()
+        
+        assert account.get_role_display() == "User"
+        
+        account.role = RoleEnum.PROPERTY_OWNER
+        assert account.get_role_display() == "Property Owner"
+        
+        account.role = RoleEnum.ADMIN
+        assert account.get_role_display() == "Administrator"

@@ -2,6 +2,7 @@
 Tests for Account repository
 """
 import pytest
+from uuid import uuid4
 from app.repositories.account_repository import AccountRepository
 from app.models.account import Account, RoleEnum
 from app.auth.password_handler import hash_password
@@ -81,37 +82,47 @@ class TestAccountRepository:
         
         assert account is None
     
-    def test_exists_by_username(self, db_session, created_user):
+    def test_username_exists(self, db_session):
         """Test checking if username exists"""
+        account = Account(
+            username="existinguser",
+            fullName="Existing User",
+            email="existing@example.com",
+            phoneNumber="11999999999",
+            password=hash_password("password123"),
+            role=RoleEnum.USER
+        )
+        db_session.add(account)
+        db_session.flush()
+        
         repo = AccountRepository(db_session)
         
-        exists = repo.exists_by_username(created_user["username"])
+        # Should exist
+        assert repo.username_exists("existinguser") == True
         
-        assert exists is True
+        # Should not exist
+        assert repo.username_exists("nonexistent") == False
     
-    def test_exists_by_username_not_found(self, db_session):
-        """Test checking if non-existent username exists"""
-        repo = AccountRepository(db_session)
-        
-        exists = repo.exists_by_username("nonexistent_user")
-        
-        assert exists is False
-    
-    def test_exists_by_email(self, db_session, created_user):
+    def test_email_exists(self, db_session):
         """Test checking if email exists"""
+        account = Account(
+            username="emailuser",
+            fullName="Email User",
+            email="testemail@example.com",
+            phoneNumber="11999999999",
+            password=hash_password("password123"),
+            role=RoleEnum.USER
+        )
+        db_session.add(account)
+        db_session.flush()
+        
         repo = AccountRepository(db_session)
         
-        exists = repo.exists_by_email(created_user["email"])
+        # Should exist
+        assert repo.email_exists("testemail@example.com") == True
         
-        assert exists is True
-    
-    def test_exists_by_email_not_found(self, db_session):
-        """Test checking if non-existent email exists"""
-        repo = AccountRepository(db_session)
-        
-        exists = repo.exists_by_email("nonexistent@example.com")
-        
-        assert exists is False
+        # Should not exist
+        assert repo.email_exists("nonexistent@example.com") == False
     
     def test_count_admins(self, db_session, created_admin):
         """Test counting admin users"""
@@ -144,15 +155,30 @@ class TestAccountRepository:
         deleted_account = repo.get_by_id(account_id)
         assert deleted_account is None
     
-    def test_get_all_accounts(self, db_session, created_user, created_admin):
-        """Test getting all accounts"""
+    def test_get_all_paginated(self, db_session):
+        """Test getting paginated accounts"""
         repo = AccountRepository(db_session)
         
-        accounts = repo.get_all()
+        # Create multiple accounts
+        for i in range(3):
+            account = Account(
+                username=f"paguser{i}",
+                fullName=f"User {i}",
+                email=f"paguser{i}@example.com",
+                phoneNumber="11999999999",
+                password=hash_password("password123"),
+                role=RoleEnum.USER
+            )
+            repo.create(account)
         
-        assert len(accounts) >= 2
-        assert any(str(acc.id) == created_user["id"] for acc in accounts)
-        assert any(str(acc.id) == created_admin["id"] for acc in accounts)
+        accounts, total = repo.get_all_paginated(page=1, size=10)
+        
+        assert len(accounts) >= 3
+        assert total >= 3
+        usernames = [acc.username for acc in accounts]
+        assert "paguser0" in usernames
+        assert "paguser1" in usernames
+        assert "paguser2" in usernames
     
     def test_username_case_insensitive(self, db_session, created_user):
         """Test that username search is case insensitive"""

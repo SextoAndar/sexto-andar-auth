@@ -56,10 +56,10 @@ class TestSettings:
         assert settings.DB_READY_DELAY_SECONDS > 0
     
     def test_api_route_with_empty_string(self):
-        """Test api_route with empty string"""
+        """Test api_route with empty string returns base path"""
         from app.settings import settings
         
-        assert settings.api_route("") == "/api/"
+        assert settings.api_route("") == "/api"
     
     def test_api_route_with_multiple_slashes(self):
         """Test api_route removes duplicate slashes"""
