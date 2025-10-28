@@ -23,6 +23,17 @@ from app.models import Account
 # Import controllers/routers (auth only)
 from app.controllers.auth_controller import router as auth_router
 
+# Import API documentation configuration
+from app.config.api_docs import (
+    API_TITLE,
+    API_VERSION,
+    API_DESCRIPTION,
+    API_SERVERS,
+    API_TAGS_METADATA,
+    API_CONTACT,
+    API_LICENSE_INFO
+)
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -67,33 +78,13 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI application with professional documentation
 app = FastAPI(
-    title="Auth Service API",
-    description="""Auth-only service providing account registration, login, logout, and JWT-based session management.
-
-## Authentication
-- Registration: Create USER or PROPERTY_OWNER accounts
-- Login: Authenticate and receive JWT token in cookie
-- Logout: Clear authentication cookie
-- Role-based access control via JWT claims
-
-## Technical Stack
-- Framework: FastAPI with async/await support
-- Database: PostgreSQL with SQLAlchemy ORM
-- Authentication: JWT with HTTP-only cookies
-- Validation: Pydantic models
-
-## Getting Started
-1. Run database migrations: python scripts/migrate_database.py
-2. Register using /api/v1/auth/register endpoints
-3. Login using /api/v1/auth/login
-""",
-    version="1.0.0",
-    servers=[
-        {
-            "url": "http://localhost:8000",
-            "description": "Development server"
-        }
-    ],
+    title=API_TITLE,
+    description=API_DESCRIPTION,
+    version=API_VERSION,
+    servers=API_SERVERS,
+    openapi_tags=API_TAGS_METADATA,
+    contact=API_CONTACT,
+    license_info=API_LICENSE_INFO,
     lifespan=lifespan
 )
 
@@ -113,8 +104,8 @@ async def root():
     return {
         "message": "Auth Service API is running",
         "status": "healthy",
-        "version": "1.0.0",
-        "api": "Auth Service API",
+        "version": API_VERSION,
+        "api": API_TITLE,
         "documentation": "/docs",
         "redoc": "/redoc"
     }
