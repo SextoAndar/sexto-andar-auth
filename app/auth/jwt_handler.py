@@ -4,10 +4,7 @@ from typing import Optional, Dict, Any
 import jwt
 from jwt import InvalidTokenError
 
-# Configurações JWT (em produção, usar variáveis de ambiente)
-SECRET_KEY = "your-super-secret-key-change-in-production"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+from app.settings import settings
 
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
     """
@@ -25,10 +22,10 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     
     return encoded_jwt
 
@@ -43,7 +40,7 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
         Decoded token data or None if invalid
     """
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         return payload
     except InvalidTokenError:
         return None
@@ -55,4 +52,4 @@ def get_token_expiry() -> timedelta:
     Returns:
         Token expiration timedelta
     """
-    return timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    return timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)

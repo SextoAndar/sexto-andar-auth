@@ -2,7 +2,6 @@
 Database configuration for FastAPI with SQLAlchemy
 """
 
-import os
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -16,11 +15,10 @@ import asyncpg
 from databases import Database
 import asyncio
 
+from app.settings import settings
+
 # Database configurations
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://sexto_andar_user:sexto_andar_pass@localhost:5432/sexto_andar_db"
-)
+DATABASE_URL = settings.DATABASE_URL
 
 # For async connections
 ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
@@ -29,7 +27,7 @@ ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg:/
 engine = create_engine(
     DATABASE_URL,
     poolclass=NullPool,  # Avoids connection issues in containers
-    echo=os.getenv("SQL_DEBUG", "false").lower() == "true"  # Log SQL queries if SQL_DEBUG=true
+    echo=settings.SQL_DEBUG  # Log SQL queries if SQL_DEBUG=true
 )
 
 # Session maker
@@ -149,8 +147,8 @@ async def wait_for_database_ready(max_attempts: int = None, delay_seconds: float
     stack component that already brought up the DB. Reads overrides from env vars:
     DB_READY_MAX_ATTEMPTS, DB_READY_DELAY_SECONDS.
     """
-    attempts = int(os.getenv("DB_READY_MAX_ATTEMPTS", str(max_attempts or 30)))
-    delay = float(os.getenv("DB_READY_DELAY_SECONDS", str(delay_seconds or 1.0)))
+    attempts = max_attempts if max_attempts is not None else settings.DB_READY_MAX_ATTEMPTS
+    delay = delay_seconds if delay_seconds is not None else settings.DB_READY_DELAY_SECONDS
     logger = logging.getLogger(__name__)
     for attempt in range(1, attempts + 1):
         try:
