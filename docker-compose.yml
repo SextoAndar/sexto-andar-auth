@@ -38,7 +38,7 @@ services:
     volumes:
       - ./app:/app/app:ro
       - ./scripts:/app/scripts:ro
-    restart: "no"  # Only run once
+    restart: "no"
 
   auth:
     build: 
@@ -59,7 +59,7 @@ services:
     networks:
       - sexto-andar-network
     volumes:
-      - ./app:/app/app:ro  # Mount app directory for development (read-only)
+      - ./app:/app/app:ro
 
   pgadmin:
     image: dpage/pgadmin4:latest

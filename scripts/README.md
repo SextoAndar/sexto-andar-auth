@@ -1,80 +1,81 @@
 # Scripts
 
-Esta pasta contém scripts utilitários para o projeto Real Estate Management API.
+This folder contains utility scripts for the authentication service.
 
 ## migrate_database.py
 
-Script para migração e inicialização do banco de dados.
+Script for applying and validating database migrations.
 
-### Uso:
+### Usage
 
 ```bash
-# Executar migrações (interativo)
+# Run migrations interactively
 python scripts/migrate_database.py
 
-# Executar migrações forçadas (sem confirmação)
+# Force migrations (no prompts)
 python scripts/migrate_database.py --force
 
-# Apenas verificar status do banco
+# Check DB status only
 python scripts/migrate_database.py --check
 ```
 
-### Quando usar:
-- **Primeira instalação**: Execute antes de iniciar a aplicação pela primeira vez
-- **Após mudanças no modelo**: Execute sempre que modificar os modelos do banco
-- **Problemas de sincronização**: Execute quando o banco estiver desatualizado
+### When to use
+- First installation: run before starting the application for the first time
+- After model changes: run when you modify ORM models
+- Sync issues: run when the DB schema is out of sync
 
-### O que o script faz:
-1. Valida os modelos SQLAlchemy
-2. Aplica migrações necessárias
-3. Cria/atualiza tabelas
-4. Verifica conectividade do banco
+### What the script does
+1. Validate SQLAlchemy models
+2. Apply schema migrations
+3. Create/update tables
+4. Check DB connectivity
 
 ## create_admin.py
 
-Script para criar usuários administradores.
+Script to create administrative users.
 
-### Uso:
+### Usage
 
 ```bash
-# Criar um usuário admin
-python scripts/create_admin.py
+# Create an admin user
+python scripts/create_admin.py <username> "<full_name>" <email> <password> <phone>
 ```
 
-### Quando usar:
-- Para criar o primeiro usuário administrador
-- Para criar novos administradores do sistema
+### When to use
+- To create the first administrator account
+- To create additional admin accounts when needed
 
-## Ordem de execução recomendada:
+## Recommended execution order
 
-1. **Uso normal (automático):**
-   ```bash
-   # Migração automática no Docker Compose
-   docker-compose up --build -d
-   
-   # Criar admin se necessário
-   python scripts/create_admin.py
-   ```
+1. Automatic / normal usage:
 
-2. **Primeira instalação (controle manual):**
-   ```bash
-   # 1. Subir o banco com Docker
-   docker-compose up -d postgres
-   
-   # 2. Executar migrações manualmente
-   python scripts/migrate_database.py
-   
-   # 3. Criar admin (opcional)
-   python scripts/create_admin.py
-   
-   # 4. Iniciar a aplicação
-   docker-compose up -d api
-   ```
+```bash
+# Start services (migrations run automatically)
+docker-compose up --build -d
 
-## Notas importantes:
+# Create admin if necessary
+python scripts/create_admin.py <username> "<full_name>" <email> <password> <phone>
+```
 
-- ✅ **Migração automática**: Docker Compose executa `migrate_database.py` automaticamente
-- ✅ **Sem intervenção manual**: `docker-compose up` cuida de tudo
-- ✅ **Scripts disponíveis**: Para casos especiais e debugging
-- ✅ **Ordem garantida**: API só inicia após migração bem-sucedida
-- ⚠️ **Use `--build`**: Para aplicar mudanças no código após modificações
+2. First install (manual control):
+
+```bash
+# 1) Start Postgres
+docker-compose up -d postgres
+
+# 2) Run migrations manually
+python scripts/migrate_database.py
+
+# 3) Create admin (optional)
+python scripts/create_admin.py <username> "<full_name>" <email> <password> <phone>
+
+# 4) Start the app
+docker-compose up -d
+```
+
+## Notes
+
+- ✅ Automatic migrations: Docker Compose runs `migrate_database.py` automatically
+- ✅ Scripts available for special cases and debugging
+- ✅ Service starts only after migrations complete successfully
+- ⚠️ Use `--build` when you change application code to rebuild images

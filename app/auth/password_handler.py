@@ -1,7 +1,7 @@
 # app/auth/password_handler.py
 from passlib.context import CryptContext
 
-# Configuração do bcrypt para hash de senhas
+# bcrypt configuration for password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str) -> str:
