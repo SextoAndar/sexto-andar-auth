@@ -37,7 +37,7 @@ async def create_admin(username, full_name, email, password, phone_number=None):
         account_repo = AccountRepository(db)
         
         # Validate inputs
-        print("� Validating input data...")
+        print("Validating input data...")
         
         # Username validation
         if len(username) < 3 or len(username) > 50:
