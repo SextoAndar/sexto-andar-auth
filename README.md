@@ -12,7 +12,7 @@ Serviço FastAPI focado exclusivamente em autenticação: registro, login, logou
 
 ```bash
 git clone <seu-repositorio>
-cd sexto-andar-api
+cd sexto-andar-auth
 
 # Crie e ative um ambiente virtual (opcional mas recomendado)
 python -m venv venv
@@ -102,6 +102,7 @@ python scripts/migrate_database.py --check
 - **Banco de dados**: PostgreSQL com SQLAlchemy ORM
 - **Autenticação**: JWT com HTTP-only cookies
 - **Validação**: Pydantic models
+- **Hash de Senha**: bcrypt
 - **Containerização**: Docker Compose
 
 ## �‍💼 Gerenciamento de Admins
@@ -178,19 +179,236 @@ curl -X DELETE http://localhost:8001/api/v1/auth/admin/delete-admin/{admin_id} \
 
 ---
 
-## �🔐 Autenticação
+##  Autenticação
 
-A API utiliza JWT com cookies HTTP-only seguros. Perfis suportados: `USER`, `PROPERTY_OWNER`, `ADMIN`.
+### Fluxo de Login
+1. Cliente faz `POST /api/v1/auth/login` com username e password
+2. API valida credenciais contra o banco (bcrypt)
+3. API gera JWT com claims: `sub` (user_id), `username`, `role`
+4. JWT é retornado no response e em um HTTP-only cookie
+5. Cliente envia JWT em requisições subsequentes
+6. API valida JWT localmente (sem chamar banco)
 
-### Endpoints Principais
-- `POST /api/v1/auth/register/user` - Registro de usuário
-- `POST /api/v1/auth/register/property-owner` - Registro de proprietário
-- `POST /api/v1/auth/login` - Login
-- `POST /api/v1/auth/logout` - Logout
+### Roles Disponíveis
+- **USER**: Usuário comum (registra via `/register/user`)
+- **PROPERTY_OWNER**: Proprietário de imóvel (registra via `/register/property-owner`)
+- **ADMIN**: Administrador do sistema (criado apenas via script ou API protegida)
+
+### Endpoints de Autenticação
+- `POST /api/v1/auth/register/user` - Registrar usuário
+- `POST /api/v1/auth/register/property-owner` - Registrar proprietário
+- `POST /api/v1/auth/login` - Login (retorna JWT)
+- `POST /api/v1/auth/logout` - Logout (limpa cookie)
+- `GET /api/v1/auth/me` - Obter usuário autenticado
+- `POST /api/v1/auth/introspect` - Validar token (service-to-service)
 - `POST /api/v1/auth/admin/create-admin` - Criar admin (admin only)
 - `DELETE /api/v1/auth/admin/delete-admin/{id}` - Deletar admin (admin only)
 
-## 🛠️ Desenvolvimento
+### Segurança
+- ✅ JWT com expiração (30 minutos)
+- ✅ HTTP-only cookies (proteção contra XSS)
+- ✅ SameSite=Lax (proteção contra CSRF)
+- ✅ Hash bcrypt de senhas
+- ✅ Validação de autorização por role
+- ✅ Logs de auditoria (criação/deleção de admin)
+- ⚠️ Em produção: ativar HTTPS (`secure=True` no cookie)
+
+## � Exemplos de Uso
+
+### Registrar novo usuário
+
+```bash
+curl -X POST http://localhost:8001/api/v1/auth/register/user \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "joao_silva",
+    "fullName": "João Silva",
+    "email": "joao@example.com",
+    "phoneNumber": "11987654321",
+    "password": "senha123456"
+  }'
+```
+
+**Resposta (201):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "joao_silva",
+  "fullName": "João Silva",
+  "email": "joao@example.com",
+  "role": "USER",
+  "created_at": "2025-10-28T10:30:00"
+}
+```
+
+### Login
+
+```bash
+curl -X POST http://localhost:8001/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "joao_silva",
+    "password": "senha123456"
+  }' \
+  -c cookies.txt  # Salva o cookie
+```
+
+**Resposta (200):**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "joao_silva",
+    "role": "USER"
+  }
+}
+```
+
+### Obter dados do usuário autenticado
+
+```bash
+curl http://localhost:8001/api/v1/auth/me \
+  -b cookies.txt  # Usa o cookie do login
+```
+
+**Resposta (200):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "joao_silva",
+  "fullName": "João Silva",
+  "email": "joao@example.com",
+  "role": "USER",
+  "created_at": "2025-10-28T10:30:00"
+}
+```
+
+### Logout
+
+```bash
+curl -X POST http://localhost:8001/api/v1/auth/logout \
+  -b cookies.txt
+```
+
+### Validar token (service-to-service)
+
+```bash
+curl -X POST http://localhost:8001/api/v1/auth/introspect \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+
+**Resposta (200):**
+```json
+{
+  "active": true,
+  "sub": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "joao_silva",
+  "role": "USER",
+  "exp": 1635345600
+}
+```
+
+### Criar novo admin (como admin autenticado)
+
+```bash
+# 1. Faça login como admin (se houver cookie previamente)
+curl -X POST http://localhost:8001/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "@Admin11"
+  }' \
+  -c cookies.txt
+
+# 2. Crie novo admin
+curl -X POST http://localhost:8001/api/v1/auth/admin/create-admin \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "username": "admin2",
+    "fullName": "Segundo Admin",
+    "email": "admin2@example.com",
+    "phoneNumber": "11988776655",
+    "password": "senha123456"
+  }'
+```
+
+**Resposta (201):**
+```json
+{
+  "id": "660f9511-f40c-52e5-b827-557766551111",
+  "username": "admin2",
+  "fullName": "Segundo Admin",
+  "email": "admin2@example.com",
+  "role": "ADMIN",
+  "created_at": "2025-10-28T10:35:00"
+}
+```
+
+### Deletar admin (como admin autenticado)
+
+```bash
+curl -X DELETE http://localhost:8001/api/v1/auth/admin/delete-admin/660f9511-f40c-52e5-b827-557766551111 \
+  -b cookies.txt
+```
+
+**Resposta (200):**
+```json
+{
+  "message": "Admin deleted successfully"
+}
+```
+
+## ⚠️ Status Codes e Erros
+
+### Sucesso
+- **200 OK**: Requisição bem-sucedida (GET, POST logout, DELETE bem-sucedido)
+- **201 Created**: Recurso criado (POST register, POST login, POST create-admin)
+
+### Erros de Cliente
+- **400 Bad Request**: 
+  - Validação falhou (username inválido, email malformado, etc)
+  - Credenciais inválidas (username/password incorreto)
+  - Operação não permitida (tentar deletar último admin, deletar a si mesmo, etc)
+- **401 Unauthorized**: 
+  - Token ausente, inválido ou expirado
+  - Não autenticado para acessar recurso
+- **403 Forbidden**: 
+  - Autenticado mas sem permissão (ex: usuário tentando criar admin)
+- **404 Not Found**: 
+  - Recurso não encontrado (ex: admin ID inválido no delete)
+- **409 Conflict**: 
+  - Email já existe
+  - Username já existe
+
+### Erros de Servidor
+- **500 Internal Server Error**: Erro inesperado no servidor
+- **503 Service Unavailable**: Banco de dados indisponível
+
+### Exemplo de Erro
+
+```bash
+curl -X POST http://localhost:8001/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "usuario_inexistente",
+    "password": "senha123456"
+  }'
+```
+
+**Resposta (400):**
+```json
+{
+  "detail": "Invalid username or password"
+}
+```
+
+## �️ Desenvolvimento
 
 ### Executar em modo desenvolvimento
 
@@ -215,7 +433,7 @@ python scripts/migrate_database.py
 docker-compose up -d
 ```
 
-## 🔧 Configuração
+## Configuração
 
 ### Variáveis de Ambiente
 
@@ -286,15 +504,167 @@ docker exec sexto-andar-auth python scripts/create_admin.py admin "Admin User" a
 3. **Rebuilds**: Use `--build` após mudanças no código para recriar containers
 4. **Admin users**: Crie usando `python scripts/create_admin.py` após subir os serviços
 
+## 🔗 Integração com Outros Serviços
+
+### Validação de Token em Serviço Externo
+
+Qualquer serviço pode validar tokens gerados por esta API usando duas estratégias:
+
+#### 1. Validação Local (Recomendado para performance)
+Se seu serviço tiver acesso a `SECRET_KEY` (mesma chave usada aqui):
+
+```python
+import jwt
+from datetime import datetime
+
+SECRET_KEY = "sua-chave-secreta"
+ALGORITHM = "HS256"
+
+def validate_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return {
+            "valid": True,
+            "user_id": payload.get("sub"),
+            "username": payload.get("username"),
+            "role": payload.get("role")
+        }
+    except jwt.ExpiredSignatureError:
+        return {"valid": False, "error": "Token expirado"}
+    except jwt.InvalidTokenError:
+        return {"valid": False, "error": "Token inválido"}
+```
+
+#### 2. Validação Remota via Endpoint
+
+```bash
+# No seu serviço
+curl -X POST http://auth-service:8001/api/v1/auth/introspect \
+  -H "Content-Type: application/json" \
+  -d '{"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}'
+```
+
+### Exemplo: FastAPI com Validação
+
+```python
+from fastapi import FastAPI, Depends, HTTPException
+import httpx
+
+app = FastAPI()
+AUTH_SERVICE_URL = "http://localhost:8001"
+
+async def verify_token(token: str):
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{AUTH_SERVICE_URL}/api/v1/auth/introspect",
+            json={"token": token}
+        )
+        if response.status_code != 200:
+            raise HTTPException(401, "Invalid token")
+        return response.json()
+
+@app.get("/protected")
+async def protected_route(token_info = Depends(verify_token)):
+    return {"message": f"Hello {token_info['username']}"}
+```
+
+## 🛠️ Troubleshooting
+
+### API não inicia após `docker-compose up`
+
+**Sintoma**: Container auth em restart contínuo
+**Solução**:
+```bash
+# 1. Verifique logs
+docker-compose logs auth
+
+# 2. Limpe tudo e reinicie
+docker-compose down -v
+docker system prune -a --volumes -f
+docker-compose up --build -d
+```
+
+### Erro: "Cannot GET /health"
+
+**Sintoma**: Health check falha
+**Solução**: 
+- Verifique se porta 8001 está correta em docker-compose.yml
+- Confirme que API iniciou: `docker-compose logs auth | grep "Uvicorn running"`
+
+### Erro: "database connection refused"
+
+**Sintoma**: API não consegue conectar ao PostgreSQL
+**Solução**:
+```bash
+# 1. Verifique se postgres está rodando
+docker-compose ps postgres
+
+# 2. Verifique DATABASE_URL
+docker-compose exec auth env | grep DATABASE_URL
+
+# 3. Tente reconectar
+docker-compose restart auth
+```
+
+### Admin script falha: "ModuleNotFoundError"
+
+**Sintoma**: Erro ao executar `docker exec sexto-andar-auth python scripts/create_admin.py`
+**Solução**:
+- Verifique se Dockerfile tem `COPY scripts/ ./scripts/`
+- Reconstrua: `docker-compose build --no-cache`
+
+### Erro 409 Conflict ao criar usuário
+
+**Sintoma**: "Email already exists" ou "Username already taken"
+**Solução**: Use username/email diferentes ou delete usuário do banco:
+```bash
+docker exec -it postgres-container-id psql -U sexto_andar_user -d sexto_andar_db
+DELETE FROM accounts WHERE username = 'usuario_duplicado';
+```
+
+### Token inválido ou expirado
+
+**Sintoma**: Erro 401 em endpoints protegidos
+**Solução**:
+- Faça login novamente para obter novo token
+- Verifique se JWT_EXPIRE_MINUTES está correto (padrão: 30 minutos)
+- Confirme que `SECRET_KEY` é a mesma em todos os serviços
+
+### Migração do banco falha
+
+**Sintoma**: Container migrate com status "exited"
+**Solução**:
+```bash
+# 1. Verifique o erro
+docker-compose logs migrate
+
+# 2. Execute migração manualmente
+docker-compose exec auth python scripts/migrate_database.py --force
+
+# 3. Recrie tudo
+docker-compose down -v
+docker-compose up --build -d
+```
+
 ## 🤝 Contribuindo
 
 1. Execute as migrações após fazer checkout
-2. Teste suas mudanças localmente
+2. Teste suas mudanças localmente com `docker-compose up`
 3. Execute as migrações após mudanças no modelo
 4. Documente novos endpoints na documentação OpenAPI
+5. Mantenha a consistência de naming (em inglês na código, em português em comentários/docs)
+
+### Boas Práticas
+- ✅ Sempre validar input com Pydantic
+- ✅ Usar dependências FastAPI para autenticação
+- ✅ Logar operações sensíveis (criação/deleção de admin)
+- ✅ Implementar proteções contra edge cases
+- ✅ Testar endpoints via Swagger UI (/docs) antes de commitar
 
 ## 📞 Suporte
 
-- **Documentação**: http://localhost:8001/docs
-- **Issues**: Abra uma issue no repositório
+- **Documentação API**: http://localhost:8001/docs
+- **Swagger UI**: http://localhost:8001/swagger.json
 - **Health Check**: http://localhost:8001/health
+- **Issues**: Abra uma issue no repositório
+- **pgAdmin**: http://localhost:8080 (para debugging do banco)
