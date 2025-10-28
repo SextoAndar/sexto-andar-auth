@@ -42,6 +42,35 @@ services:
       - ./scripts:/app/scripts:ro
     restart: "no"
 
+  test:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: sexto-andar-test
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://sexto_andar_user:sexto_andar_pass@postgres:5432/sexto_andar_test_db
+      JWT_SECRET_KEY: test-secret-key-for-testing-only
+      JWT_ALGORITHM: HS256
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      API_BASE_PATH: /api
+      SQL_DEBUG: "false"
+    command: >
+      sh -c "
+        psql -h postgres -U sexto_andar_user -d postgres -c 'CREATE DATABASE sexto_andar_test_db;' || true &&
+        pytest tests/ -v --cov=app --cov-report=term-missing
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sexto-andar-network
+    volumes:
+      - ./app:/app/app:ro
+      - ./tests:/app/tests:ro
+    restart: "no"
+
   auth:
     build: 
       context: .

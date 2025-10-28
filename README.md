@@ -261,7 +261,12 @@ docker-compose exec auth python scripts/migrate_database.py --force
 
 ## 🧪 Testing
 
-### Run all tests:
+### Run tests with Docker:
+```bash
+docker-compose run --rm test
+```
+
+### Run tests locally:
 ```bash
 ./run_tests.sh
 ```

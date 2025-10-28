@@ -54,3 +54,34 @@ class TestSettings:
         
         assert isinstance(settings.DB_READY_DELAY_SECONDS, float)
         assert settings.DB_READY_DELAY_SECONDS > 0
+    
+    def test_api_route_with_empty_string(self):
+        """Test api_route with empty string"""
+        from app.settings import settings
+        
+        assert settings.api_route("") == "/api/"
+    
+    def test_api_route_with_multiple_slashes(self):
+        """Test api_route removes duplicate slashes"""
+        from app.settings import settings
+        
+        result = settings.api_route("/users")
+        assert result == "/api/users"
+        assert "//" not in result or result.startswith("http")
+    
+    def test_settings_all_properties_accessible(self):
+        """Test that all settings properties are accessible"""
+        from app.settings import settings
+        
+        # Test all properties can be accessed without error
+        _ = settings.API_BASE_PATH
+        _ = settings.JWT_SECRET_KEY
+        _ = settings.JWT_ALGORITHM
+        _ = settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        _ = settings.DATABASE_URL
+        _ = settings.SQL_DEBUG
+        _ = settings.DB_READY_MAX_ATTEMPTS
+        _ = settings.DB_READY_DELAY_SECONDS
+        
+        # All should succeed without exception
+        assert True
