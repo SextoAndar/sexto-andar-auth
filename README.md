@@ -280,3 +280,32 @@ python -m pytest tests/ -v
 ```bash
 python -m pytest tests/ --cov=app --cov-report=html
 ```
+
+### CI: Run tests in Docker pipeline
+
+Para rodar os testes automaticamente no pipeline de CI/CD, use o perfil `test` do docker-compose:
+
+```bash
+# Build sem cache e roda os testes
+docker-compose build --no-cache
+docker-compose --profile test up --abort-on-container-exit --exit-code-from test
+
+# Limpa depois
+docker-compose down --volumes
+```
+
+**Exemplo GitHub Actions:**
+
+```yaml
+steps:
+  - uses: actions/checkout@v4
+  - name: Build and test
+    run: |
+      docker compose build --no-cache
+      docker compose --profile test up --abort-on-container-exit --exit-code-from test
+```
+
+**Notas:**
+- O perfil `test` aguarda o Postgres estar saudável antes de executar
+- Exit code != 0 se algum teste falhar (ideal para CI)
+- Use `--no-cache` para garantir que a build sempre rode testes atualizados
