@@ -17,6 +17,11 @@ from app.dtos.auth_dto import (
 from app.auth.jwt_handler import get_token_expiry, verify_token
 from app.auth.dependencies import get_current_user, get_current_admin_user
 from app.models.account import Account
+from app.dtos.user_dto import UserInfoResponse
+from app.services.property_relation_service import check_user_property_relation
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -181,3 +186,67 @@ async def introspect(body: IntrospectRequest) -> IntrospectResponse:
     if not payload:
         return IntrospectResponse(active=False, reason="invalid_or_expired")
     return IntrospectResponse(active=True, claims=payload)
+
+
+@router.get("/admin/users/{user_id}", response_model=UserInfoResponse, summary="Get user info by ID (Admin or owner)")
+async def get_user_by_id(
+    user_id: str,
+    current_user: Account = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve a user's public information by ID.
+
+    Access rules:
+    - ADMIN users can retrieve any user's information.
+    - PROPERTY_OWNER users can retrieve information ONLY of users who:
+      - Are themselves (own user_id)
+      - Have visits scheduled at their properties
+      - Have made proposals for their properties
+    - Regular USER role is forbidden.
+    
+    Security:
+    - Property owners MUST have a validated relation with the user
+    - Relation is checked via inter-service call to properties API
+    - Fail-safe: denies access if properties API is unavailable
+    """
+    # Authorization: only admins or property owners
+    if not (current_user.is_admin() or current_user.is_property_owner()):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to access user information"
+        )
+
+    # SECURITY: Property owners must have relation with the user
+    if current_user.is_property_owner() and not current_user.is_admin():
+        # Allow access to own information
+        if str(current_user.id) != user_id:
+            # Validate relation with properties API
+            logger.info(
+                f"Property owner {current_user.id} requesting info for user {user_id} - "
+                f"checking relation via properties API"
+            )
+            
+            has_relation = await check_user_property_relation(
+                user_id=user_id,
+                owner_id=str(current_user.id)
+            )
+            
+            if not has_relation:
+                logger.warning(
+                    f"Property owner {current_user.id} denied access to user {user_id} - "
+                    f"no relation found"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You can only access information of users who interacted with your properties"
+                )
+            
+            logger.info(
+                f"Property owner {current_user.id} granted access to user {user_id} - "
+                f"relation validated"
+            )
+
+    auth_service = AuthService(db)
+    account = auth_service.get_user_by_id(user_id)
+    return UserInfoResponse.from_account(account)

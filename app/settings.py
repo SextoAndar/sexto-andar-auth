@@ -26,6 +26,8 @@ class Settings:
     _JWT_SECRET_KEY: str = "your-super-secret-key-change-in-production"
     _JWT_ALGORITHM: str = "HS256"
     _JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    _PROPERTIES_API_URL: str = "http://localhost:8000"
+    _INTERNAL_API_SECRET: str = ""
     
     def __init__(self):
         """Initialize configuration by reading from .env if available."""
@@ -70,6 +72,19 @@ class Settings:
         
         # SQL logging
         self.SQL_DEBUG: bool = os.getenv("SQL_DEBUG", "false").lower() in ("true", "1", "yes")
+        
+        # ===== Inter-Service Communication =====
+        self.PROPERTIES_API_URL: str = os.getenv("PROPERTIES_API_URL", self._PROPERTIES_API_URL).rstrip('/')
+        self.INTERNAL_API_SECRET: str = os.getenv("INTERNAL_API_SECRET", self._INTERNAL_API_SECRET)
+        
+        # Warn if INTERNAL_API_SECRET is not set
+        if not self.INTERNAL_API_SECRET:
+            import warnings
+            warnings.warn(
+                "⚠️  INTERNAL_API_SECRET not set! Inter-service authentication will fail.",
+                category=RuntimeWarning,
+                stacklevel=2
+            )
     
     def api_route(self, route: str) -> str:
         """

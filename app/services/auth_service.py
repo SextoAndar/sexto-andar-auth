@@ -194,6 +194,27 @@ class AuthService:
         )
         
         return created_admin
+
+    def get_user_by_id(self, user_id: str) -> Account:
+        """
+        Retrieve a user/account by UUID
+
+        Args:
+            user_id: UUID string of the user
+
+        Returns:
+            Account instance
+
+        Raises:
+            HTTPException: If user not found
+        """
+        user = self.account_repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        return user
     
     def delete_admin(self, admin_id: str, deleter_admin: Account) -> None:
         """
