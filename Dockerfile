@@ -38,9 +38,11 @@ USER app
 # Expose port
 EXPOSE 8001
 
-# Health check - uses API_BASE_PATH env var (defaults to /api)
+# Health check - normalize API_BASE_PATH then hit the correct /health path
+# If API_BASE_PATH is empty or "/" the path becomes "/health", otherwise
+# we append "/health" to the trimmed base path (avoids `//health` 404s).
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8001${API_BASE_PATH:-/api}/health || exit 1
+    CMD sh -c 'p=${API_BASE_PATH:-/}; p=${p%/}; if [ -z "${p}" ] || [ "${p}" = "/" ]; then path="/health"; else path="${p}/health"; fi; curl -fsS -o /dev/null "http://localhost:8001${path}" || exit 1'
 
 # Command to run the application
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
