@@ -23,6 +23,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - sexto-andar-network
+    profiles:
+      - full-stack
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sexto_andar_user -d sexto_andar_db"]
       interval: 10s
@@ -49,6 +51,8 @@ services:
       - ./app:/app/app:ro
       - ./scripts:/app/scripts:ro
     restart: "no"  # Run once only
+    profiles:
+      - full-stack
 
   test:
     build: 
@@ -98,11 +102,11 @@ services:
       JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
     ports:
       - "8001:8001"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
+    # If you want compose to manage Postgres and migrations, start with:
+    #   docker compose --profile full-stack up --build -d
+    # Otherwise ensure an external Postgres container is available on the
+    # `sexto-andar-auth_sexto-andar-network` network and the auth service will
+    # connect to it directly using the configured DATABASE_URL.
     networks:
       - sexto-andar-network
     volumes:
@@ -122,11 +126,15 @@ services:
       - postgres
     networks:
       - sexto-andar-network
+    profiles:
+      - full-stack
 
 volumes:
   postgres_data:
-    driver: local
+    external: true
+    name: sexto-andar-auth_postgres_data
 
 networks:
   sexto-andar-network:
-    driver: bridge
+    external: true
+    name: sexto-andar-auth_sexto-andar-network
