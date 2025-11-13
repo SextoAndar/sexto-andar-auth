@@ -205,6 +205,33 @@ docker-compose up --build -d
 docker exec sexto-andar-auth python scripts/create_admin.py <username> "<full_name>" <email> <password> <phone>
 ```
 
+### Sharing Postgres Between Projects (recommended)
+
+This repository is configured to *not* create the Postgres instance by default so it can safely use an existing DB already managed by another project (for example `unb/sexto-andar-api`). Key points:
+
+- **Default behavior:** `docker compose up -d` will start the `auth` service without creating Postgres or pgAdmin. This avoids name/port conflicts when another project already runs the database.
+- **Full stack (local)**: to let this compose create Postgres, migrations and pgAdmin locally, use the `full-stack` profile:
+
+```bash
+# Build and start everything including Postgres and migrations
+docker compose --profile full-stack up --build -d
+```
+
+- **External network & volume:** the compose is configured to share the network and volume names used by the properties API so both projects can attach to the same Postgres instance:
+
+  - Network name: `sexto-andar-auth_sexto-andar-network`
+  - Volume name: `sexto-andar-auth_postgres_data`
+
+  If the other project already created those resources, this compose will attach to them automatically. If needed, create the network manually:
+
+```bash
+docker network create sexto-andar-auth_sexto-andar-network
+```
+
+- **When running CI** or in environments where you want compose to manage the DB for this project specifically, use the `full-stack` profile shown above.
+
+If you want, I can add a short `docker` section to the `unb/sexto-andar-api` README showing how both projects should be started together.
+
 ## 🔗 Integration with Other Services
 
 Services can validate tokens either:
