@@ -45,6 +45,7 @@ class AuthUser(BaseModel):
     username: str
     fullName: str
     email: str
+    phoneNumber: Optional[str] = None
     role: str
     created_at: datetime
 
@@ -67,3 +68,22 @@ class IntrospectResponse(BaseModel):
     active: bool
     claims: Optional[Dict[str, Any]] = None
     reason: Optional[str] = None
+
+class UpdateProfileRequest(BaseModel):
+    """Update profile request DTO - all fields are optional"""
+    fullName: Optional[str] = Field(None, min_length=2, max_length=100)
+    phoneNumber: Optional[str] = Field(None, min_length=10, max_length=20)
+    email: Optional[EmailStr] = None
+    currentPassword: Optional[str] = Field(None, min_length=8, description="Required when changing password or email")
+    newPassword: Optional[str] = Field(None, min_length=8, description="New password (requires currentPassword)")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "fullName": "John Doe Updated",
+                "phoneNumber": "+5511999998888",
+                "email": "newemail@example.com",
+                "currentPassword": "OldPassword123!",
+                "newPassword": "NewPassword123!"
+            }
+        }

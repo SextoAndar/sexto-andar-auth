@@ -183,3 +183,30 @@ def authenticated_admin(client: TestClient, created_admin: dict):
         "cookies": login_response.cookies,
         "token": login_response.json()["access_token"]
     }
+
+
+@pytest.fixture
+def created_property_owner(client: TestClient, test_property_owner_data: dict):
+    """Create a test property owner and return the response"""
+    response = client.post("/api/auth/register/property-owner", json=test_property_owner_data)
+    assert response.status_code == 201
+    return response.json()
+
+
+@pytest.fixture
+def authenticated_property_owner(client: TestClient, created_property_owner: dict, test_property_owner_data: dict):
+    """Create and authenticate a property owner, return cookies"""
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "username": test_property_owner_data["username"],
+            "password": test_property_owner_data["password"]
+        }
+    )
+    assert login_response.status_code == 200
+    return {
+        "user": created_property_owner,
+        "cookies": login_response.cookies,
+        "token": login_response.json()["access_token"]
+    }
+

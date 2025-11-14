@@ -13,6 +13,7 @@ from app.dtos.auth_dto import (
     AuthUser,
     IntrospectRequest,
     IntrospectResponse,
+    UpdateProfileRequest,
 )
 from app.auth.jwt_handler import get_token_expiry, verify_token
 from app.auth.dependencies import get_current_user, get_current_admin_user
@@ -175,6 +176,36 @@ async def me(current_user: Account = Depends(get_current_user)):
     Returns the currently authenticated user resolved via JWT cookie.
     """
     return AuthUser.model_validate(current_user)
+
+@router.put("/profile", response_model=AuthUser, summary="Update user profile")
+async def update_profile(
+    update_data: UpdateProfileRequest,
+    current_user: Account = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update authenticated user's profile information.
+    
+    **US04**: Users can update their personal data (name, phone, email, password)
+    **US17**: Property owners can update their personal data (name, phone, email, password)
+    
+    Features:
+    - Update full name, phone number, email, or password
+    - All fields are optional - update only what you need
+    - Changing email or password requires current password verification
+    - Email uniqueness is validated
+    - Password must be at least 8 characters
+    
+    Security:
+    - Requires authentication via JWT cookie
+    - Current password verification for sensitive changes (email/password)
+    - Cannot use email that already exists for another user
+    
+    Available for: USER, PROPERTY_OWNER, and ADMIN roles.
+    """
+    auth_service = AuthService(db)
+    updated_user = auth_service.update_profile(current_user, update_data)
+    return AuthUser.model_validate(updated_user)
 
 @router.post("/introspect", response_model=IntrospectResponse, summary="Validate and decode a JWT token")
 async def introspect(body: IntrospectRequest) -> IntrospectResponse:

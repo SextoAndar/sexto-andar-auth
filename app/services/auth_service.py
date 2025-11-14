@@ -8,7 +8,13 @@ from app.models.account import Account, RoleEnum
 from app.repositories.account_repository import AccountRepository
 from app.auth.password_handler import hash_password, verify_password
 from app.auth.jwt_handler import create_access_token
-from app.dtos.auth_dto import LoginRequest, RegisterUserRequest, RegisterPropertyOwnerRequest, RegisterAdminRequest
+from app.dtos.auth_dto import (
+    LoginRequest, 
+    RegisterUserRequest, 
+    RegisterPropertyOwnerRequest, 
+    RegisterAdminRequest,
+    UpdateProfileRequest
+)
 
 logger = logging.getLogger(__name__)
 
@@ -282,4 +288,86 @@ class AuthService:
             f"Admin '{target_admin.username}' (ID: {target_admin.id}) "
             f"deleted successfully by '{deleter_admin.username}' (ID: {deleter_admin.id})"
         )
+
+    def update_profile(self, current_user: Account, update_data: UpdateProfileRequest) -> Account:
+        """
+        Update user profile (name, phone, email, password)
+        
+        Args:
+            current_user: The authenticated user
+            update_data: Profile update data
+            
+        Returns:
+            Updated account
+            
+        Raises:
+            HTTPException: If validation fails
+        """
+        logger.info(f"Profile update attempt for user '{current_user.username}' (ID: {current_user.id})")
+        
+        # Check if there's anything to update
+        if not any([
+            update_data.fullName,
+            update_data.phoneNumber,
+            update_data.email,
+            update_data.newPassword
+        ]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No fields to update"
+            )
+        
+        # If changing email or password, current password is required
+        if (update_data.email or update_data.newPassword) and not update_data.currentPassword:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is required to change email or password"
+            )
+        
+        # Verify current password if provided
+        if update_data.currentPassword:
+            if not verify_password(update_data.currentPassword, current_user.password):
+                logger.warning(f"Profile update failed: incorrect password for user '{current_user.username}'")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Current password is incorrect"
+                )
+        
+        # Update full name
+        if update_data.fullName:
+            current_user.fullName = update_data.fullName
+            logger.info(f"Updated fullName for user '{current_user.username}'")
+        
+        # Update phone number
+        if update_data.phoneNumber:
+            current_user.phoneNumber = update_data.phoneNumber
+            logger.info(f"Updated phoneNumber for user '{current_user.username}'")
+        
+        # Update email (check uniqueness)
+        if update_data.email:
+            email_lower = update_data.email.lower()
+            if email_lower != current_user.email.lower():
+                # Check if new email already exists
+                existing_user = self.account_repo.get_by_email(email_lower)
+                if existing_user and existing_user.id != current_user.id:
+                    logger.warning(f"Profile update failed: email '{email_lower}' already exists")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Email already exists"
+                    )
+                current_user.email = email_lower
+                logger.info(f"Updated email for user '{current_user.username}'")
+        
+        # Update password
+        if update_data.newPassword:
+            current_user.password = hash_password(update_data.newPassword)
+            logger.info(f"Updated password for user '{current_user.username}'")
+        
+        # Save changes
+        updated_user = self.account_repo.update(current_user)
+        
+        logger.info(f"Profile updated successfully for user '{current_user.username}' (ID: {current_user.id})")
+        
+        return updated_user
+
 
