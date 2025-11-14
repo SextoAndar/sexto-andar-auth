@@ -15,6 +15,7 @@ from app.dtos.auth_dto import (
     RegisterAdminRequest,
     UpdateProfileRequest
 )
+from app.dtos.admin_dto import UpdateUserRequest
 
 logger = logging.getLogger(__name__)
 
@@ -369,5 +370,121 @@ class AuthService:
         logger.info(f"Profile updated successfully for user '{current_user.username}' (ID: {current_user.id})")
         
         return updated_user
+    
+    def admin_update_user(self, user_id: str, update_data: UpdateUserRequest, admin: Account) -> Account:
+        """
+        Admin updates any user's profile (US26, US29)
+        
+        Args:
+            user_id: Target user ID
+            update_data: Profile update data
+            admin: The admin performing the update
+            
+        Returns:
+            Updated account
+            
+        Raises:
+            HTTPException: If validation fails
+        """
+        logger.info(f"Admin '{admin.username}' updating user ID '{user_id}'")
+        
+        # Get target user
+        target_user = self.account_repo.get_by_id(user_id)
+        if not target_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Check if there's anything to update
+        if not any([
+            update_data.fullName,
+            update_data.phoneNumber,
+            update_data.email,
+            update_data.password
+        ]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No fields to update"
+            )
+        
+        # Update full name
+        if update_data.fullName:
+            target_user.fullName = update_data.fullName
+            logger.info(f"Updated fullName for user '{target_user.username}'")
+        
+        # Update phone number
+        if update_data.phoneNumber:
+            target_user.phoneNumber = update_data.phoneNumber
+            logger.info(f"Updated phoneNumber for user '{target_user.username}'")
+        
+        # Update email (check uniqueness)
+        if update_data.email:
+            email_lower = update_data.email.lower()
+            if email_lower != target_user.email.lower():
+                if self.account_repo.email_exists(email_lower, exclude_id=str(target_user.id)):
+                    logger.warning(f"Admin update failed: email '{email_lower}' already exists")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Email already exists"
+                    )
+                target_user.email = email_lower
+                logger.info(f"Updated email for user '{target_user.username}'")
+        
+        # Update password (admin doesn't need current password)
+        if update_data.password:
+            target_user.password = hash_password(update_data.password)
+            logger.info(f"Updated password for user '{target_user.username}'")
+        
+        # Save changes
+        updated_user = self.account_repo.update(target_user)
+        
+        logger.info(
+            f"User '{target_user.username}' (ID: {target_user.id}) updated successfully "
+            f"by admin '{admin.username}' (ID: {admin.id})"
+        )
+        
+        return updated_user
+    
+    def admin_delete_user(self, user_id: str, admin: Account) -> None:
+        """
+        Admin deletes a user account (US27, US30)
+        
+        Args:
+            user_id: Target user ID
+            admin: The admin performing the deletion
+            
+        Raises:
+            HTTPException: If validation fails
+        """
+        logger.info(f"Admin '{admin.username}' attempting to delete user ID '{user_id}'")
+        
+        # Get target user
+        target_user = self.account_repo.get_by_id(user_id)
+        if not target_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Prevent deletion of admins (use dedicated admin deletion endpoint)
+        if target_user.is_admin():
+            logger.warning(
+                f"Admin '{admin.username}' attempted to delete admin user '{target_user.username}' "
+                f"via user deletion endpoint"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot delete admin users via this endpoint. Use admin deletion endpoint instead."
+            )
+        
+        # Delete the user
+        self.account_repo.delete(target_user)
+        
+        logger.info(
+            f"User '{target_user.username}' (ID: {target_user.id}, Role: {target_user.role.value}) "
+            f"deleted successfully by admin '{admin.username}' (ID: {admin.id})"
+        )
+
 
 

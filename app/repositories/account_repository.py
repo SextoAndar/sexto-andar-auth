@@ -126,3 +126,18 @@ class AccountRepository:
         if exclude_id:
             query = query.filter(Account.id != exclude_id)
         return query.first() is not None
+    
+    def search_by_email(self, email: str) -> List[Account]:
+        """
+        Search accounts by email (partial match, case-insensitive)
+        
+        Args:
+            email: Email pattern to search
+            
+        Returns:
+            List of matching accounts
+        """
+        return self.db.query(Account).filter(
+            Account.email.ilike(f"%{email}%")
+        ).all()
+

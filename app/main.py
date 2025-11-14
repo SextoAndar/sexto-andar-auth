@@ -22,6 +22,7 @@ from app.models import Account
 
 # Import controllers/routers (auth only)
 from app.controllers.auth_controller import router as auth_router
+from app.controllers.admin_controller import router as admin_router
 
 # Import API documentation configuration
 from app.config.api_docs import (
@@ -142,6 +143,7 @@ async def health_check():
 # Auth router has prefix="/auth" internally, so full path will be {API_BASE_PATH}/auth/*
 # Example: with API_BASE_PATH="/api" -> /api/auth/login, /api/auth/register/user, etc.
 api_router.include_router(auth_router)
+api_router.include_router(admin_router)
 
 # Example structure for adding more routers:
 # api_router.include_router(accounts_router)
