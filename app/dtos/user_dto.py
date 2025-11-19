@@ -13,6 +13,7 @@ class UserInfoResponse(BaseModel):
     role: str
     createdAt: datetime
     isActive: bool = True
+    hasProfilePicture: bool = False
 
     class Config:
         from_attributes = True
@@ -39,5 +40,6 @@ class UserInfoResponse(BaseModel):
             phoneNumber=account.phoneNumber,
             role=account.role.value if hasattr(account.role, 'value') else account.role,
             createdAt=account.created_at,
-            isActive=True
+            isActive=True,
+            hasProfilePicture=account.profile_picture is not None
         )

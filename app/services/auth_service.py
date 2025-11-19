@@ -485,6 +485,108 @@ class AuthService:
             f"User '{target_user.username}' (ID: {target_user.id}, Role: {target_user.role.value}) "
             f"deleted successfully by admin '{admin.username}' (ID: {admin.id})"
         )
+    
+    def upload_profile_picture(
+        self, 
+        user: Account, 
+        image_data: bytes, 
+        content_type: str
+    ) -> Account:
+        """
+        Upload or update user profile picture
+        
+        Args:
+            user: The account to update
+            image_data: Binary image data
+            content_type: MIME type of the image (e.g., 'image/jpeg')
+            
+        Returns:
+            Updated account
+            
+        Raises:
+            HTTPException: If validation fails
+        """
+        # Validate image size (max 5MB)
+        max_size = 5 * 1024 * 1024  # 5MB in bytes
+        if len(image_data) > max_size:
+            logger.warning(f"Profile picture upload failed for user '{user.username}': image too large ({len(image_data)} bytes)")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Image size exceeds maximum allowed size of {max_size // (1024 * 1024)}MB"
+            )
+        
+        # Validate content type
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+        if content_type.lower() not in allowed_types:
+            logger.warning(f"Profile picture upload failed for user '{user.username}': invalid content type '{content_type}'")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid image type. Allowed types: {', '.join(allowed_types)}"
+            )
+        
+        # Update user profile picture
+        user.profile_picture = image_data
+        user.profile_picture_content_type = content_type
+        
+        updated_user = self.account_repo.update(user)
+        
+        logger.info(
+            f"Profile picture uploaded successfully for user '{user.username}' "
+            f"(ID: {user.id}, Size: {len(image_data)} bytes, Type: {content_type})"
+        )
+        
+        return updated_user
+    
+    def get_profile_picture(self, user_id: str) -> tuple[bytes, str]:
+        """
+        Get user profile picture
+        
+        Args:
+            user_id: UUID of the user
+            
+        Returns:
+            Tuple of (image_data, content_type)
+            
+        Raises:
+            HTTPException: If user not found or no profile picture
+        """
+        user = self.account_repo.get_by_id(user_id)
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        if not user.profile_picture:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User has no profile picture"
+            )
+        
+        return (user.profile_picture, user.profile_picture_content_type or 'image/jpeg')
+    
+    def delete_profile_picture(self, user: Account) -> Account:
+        """
+        Delete user profile picture
+        
+        Args:
+            user: The account to update
+            
+        Returns:
+            Updated account
+        """
+        user.profile_picture = None
+        user.profile_picture_content_type = None
+        
+        updated_user = self.account_repo.update(user)
+        
+        logger.info(f"Profile picture deleted for user '{user.username}' (ID: {user.id})")
+        
+        return updated_user
+
+
+
 
 
 

@@ -48,6 +48,7 @@ class AuthUser(BaseModel):
     phoneNumber: Optional[str] = None
     role: str
     created_at: datetime
+    hasProfilePicture: bool = False
 
     class Config:
         from_attributes = True
@@ -58,6 +59,17 @@ class AuthUser(BaseModel):
         if isinstance(data.get('id'), uuid.UUID):
             data['id'] = str(data['id'])
         return data
+    
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        """Override model_validate to set hasProfilePicture from Account"""
+        instance = super().model_validate(obj, **kwargs)
+        
+        # Set hasProfilePicture based on whether profile_picture exists
+        if hasattr(obj, 'profile_picture'):
+            instance.hasProfilePicture = obj.profile_picture is not None
+        
+        return instance
 
 class IntrospectRequest(BaseModel):
     """Request DTO for token introspection"""
@@ -87,3 +99,18 @@ class UpdateProfileRequest(BaseModel):
                 "newPassword": "NewPassword123!"
             }
         }
+
+
+class ProfilePictureResponse(BaseModel):
+    """Response with profile picture URL"""
+    message: str
+    hasProfilePicture: bool
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "message": "Profile picture uploaded successfully",
+                "hasProfilePicture": True
+            }
+        }
+

@@ -3,6 +3,7 @@ from sqlalchemy import Column, String, DateTime, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import validates
 from sqlalchemy_utils import EmailType, PhoneNumberType
+from sqlalchemy.types import LargeBinary
 from datetime import datetime, timezone
 import uuid
 import re
@@ -65,6 +66,18 @@ class Account(BaseModel):
         Enum(RoleEnum), 
         nullable=False,
         index=True
+    )
+    
+    # Profile picture stored as binary data
+    profile_picture = Column(
+        LargeBinary,
+        nullable=True
+    )
+    
+    # Profile picture content type (e.g., image/jpeg, image/png)
+    profile_picture_content_type = Column(
+        String(50),
+        nullable=True
     )
     
     # Timestamps

@@ -251,6 +251,32 @@ def update_table_columns(session, inspector):
             session.commit()
             logger.info("✅ phoneNumber column is now nullable")
         
+        # Add profile_picture column if it doesn't exist
+        profile_picture_result = session.execute(text("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'accounts' AND column_name = 'profile_picture'
+        """)).fetchone()
+        
+        if not profile_picture_result:
+            logger.info("📝 Adding profile_picture column to accounts table...")
+            session.execute(text('ALTER TABLE accounts ADD COLUMN profile_picture BYTEA'))
+            session.commit()
+            logger.info("✅ profile_picture column added successfully")
+        
+        # Add profile_picture_content_type column if it doesn't exist
+        content_type_result = session.execute(text("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'accounts' AND column_name = 'profile_picture_content_type'
+        """)).fetchone()
+        
+        if not content_type_result:
+            logger.info("📝 Adding profile_picture_content_type column to accounts table...")
+            session.execute(text('ALTER TABLE accounts ADD COLUMN profile_picture_content_type VARCHAR(50)'))
+            session.commit()
+            logger.info("✅ profile_picture_content_type column added successfully")
+        
         logger.info("✅ Table columns updated successfully")
     except Exception as e:
         logger.error(f"❌ Error updating table columns: {e}")

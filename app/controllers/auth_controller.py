@@ -1,6 +1,8 @@
 # app/controllers/auth_controller.py
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, UploadFile, File
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from io import BytesIO
 
 from app.database.connection import get_db
 from app.services.auth_service import AuthService
@@ -14,6 +16,7 @@ from app.dtos.auth_dto import (
     IntrospectRequest,
     IntrospectResponse,
     UpdateProfileRequest,
+    ProfilePictureResponse,
 )
 from app.auth.jwt_handler import get_token_expiry, verify_token
 from app.auth.dependencies import get_current_user, get_current_admin_user
@@ -281,3 +284,102 @@ async def get_user_by_id(
     auth_service = AuthService(db)
     account = auth_service.get_user_by_id(user_id)
     return UserInfoResponse.from_account(account)
+
+
+@router.post("/profile/picture", response_model=ProfilePictureResponse, summary="Upload or update profile picture")
+async def upload_profile_picture(
+    file: UploadFile = File(...),
+    current_user: Account = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Upload or update the authenticated user's profile picture.
+    
+    Features:
+    - Accepts image files via multipart/form-data
+    - Stores image as binary data in database
+    - Maximum file size: 5MB
+    - Supported formats: JPEG, JPG, PNG, GIF
+    - Replaces existing profile picture if one exists
+    
+    Security:
+    - Requires authentication via JWT cookie
+    - Validates file size and MIME type
+    - Only the authenticated user can upload their own picture
+    
+    Available for: USER, PROPERTY_OWNER, and ADMIN roles.
+    """
+    # Read file content
+    image_data = await file.read()
+    content_type = file.content_type or 'image/jpeg'
+    
+    auth_service = AuthService(db)
+    auth_service.upload_profile_picture(current_user, image_data, content_type)
+    
+    return ProfilePictureResponse(
+        message="Profile picture uploaded successfully",
+        hasProfilePicture=True
+    )
+
+
+@router.get("/profile/picture/{user_id}", summary="Get user profile picture")
+async def get_profile_picture(
+    user_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve a user's profile picture by user ID.
+    
+    Features:
+    - Returns image as binary stream with appropriate content-type header
+    - Public endpoint - no authentication required
+    - Can be used directly in <img> tags
+    
+    Returns:
+    - Image binary data with correct MIME type
+    - 404 if user not found or has no profile picture
+    
+    Example usage in frontend:
+    ```html
+    <img src="http://localhost:8001/auth/profile/picture/{user_id}" alt="Profile" />
+    ```
+    """
+    auth_service = AuthService(db)
+    image_data, content_type = auth_service.get_profile_picture(user_id)
+    
+    return StreamingResponse(
+        BytesIO(image_data),
+        media_type=content_type,
+        headers={
+            "Cache-Control": "public, max-age=3600",  # Cache for 1 hour
+            "Content-Disposition": f"inline; filename=profile_{user_id}.jpg"
+        }
+    )
+
+
+@router.delete("/profile/picture", response_model=ProfilePictureResponse, summary="Delete profile picture")
+async def delete_profile_picture(
+    current_user: Account = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete the authenticated user's profile picture.
+    
+    Features:
+    - Removes profile picture from database
+    - Safe to call even if no picture exists
+    
+    Security:
+    - Requires authentication via JWT cookie
+    - Only the authenticated user can delete their own picture
+    
+    Available for: USER, PROPERTY_OWNER, and ADMIN roles.
+    """
+    auth_service = AuthService(db)
+    auth_service.delete_profile_picture(current_user)
+    
+    return ProfilePictureResponse(
+        message="Profile picture deleted successfully",
+        hasProfilePicture=False
+    )
+

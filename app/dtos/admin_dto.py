@@ -33,6 +33,7 @@ class UserListItem(BaseModel):
     role: str
     createdAt: datetime
     isActive: bool = True
+    hasProfilePicture: bool = False
 
     class Config:
         from_attributes = True
