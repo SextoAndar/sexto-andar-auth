@@ -212,50 +212,161 @@ curl -X DELETE http://localhost:8001/auth/profile/picture \
 
 ### Frontend Integration
 
+#### 🖼️ Exibindo Foto de Perfil
+
+**A forma mais simples - usar direto na tag `<img>`:**
+
+```html
+<!-- Substitua {userId} pelo ID do usuário -->
+<img src="http://localhost:8001/auth/profile/picture/019cc49b-f746-4e25-a6dd-425b7d3729be" alt="Profile" />
+```
+
+**Em React/Next.js:**
+
+```jsx
+// Componente simples
+function UserAvatar({ userId }) {
+  return (
+    <img 
+      src={`http://localhost:8001/auth/profile/picture/${userId}`}
+      alt="Profile"
+      onError={(e) => {
+        e.target.src = '/default-avatar.png'; // Fallback se não tiver foto
+      }}
+    />
+  );
+}
+
+// Uso
+<UserAvatar userId="019cc49b-f746-4e25-a6dd-425b7d3729be" />
+```
+
+**Verificar se o usuário tem foto antes de exibir:**
+
 ```javascript
-// Upload profile picture
-const uploadProfilePicture = async (file) => {
+// Ao fazer login ou buscar dados do usuário, o campo hasProfilePicture indica se tem foto
+const user = await fetch('http://localhost:8001/auth/me', {
+  credentials: 'include'
+}).then(r => r.json());
+
+// user.hasProfilePicture === true significa que tem foto
+// user.hasProfilePicture === false significa que deve usar avatar padrão
+
+// Exemplo de uso condicional
+function ProfilePicture({ userId, hasProfilePicture }) {
+  if (!hasProfilePicture) {
+    return <img src="/default-avatar.png" alt="Default Avatar" />;
+  }
+  
+  return (
+    <img 
+      src={`http://localhost:8001/auth/profile/picture/${userId}`}
+      alt="Profile"
+    />
+  );
+}
+```
+
+#### 📤 Upload de Foto (requer autenticação)
+
+```javascript
+// Função para fazer upload
+async function uploadProfilePicture(fileInput) {
+  const file = fileInput.files[0];
+  
+  // Validação no frontend (opcional mas recomendado)
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Arquivo muito grande! Máximo 5MB');
+    return;
+  }
+  
+  if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(file.type)) {
+    alert('Formato inválido! Use JPEG, PNG ou GIF');
+    return;
+  }
+  
   const formData = new FormData();
   formData.append('file', file);
   
   const response = await fetch('http://localhost:8001/auth/profile/picture', {
     method: 'POST',
-    credentials: 'include',  // Send JWT cookie
+    credentials: 'include',  // IMPORTANTE: envia o cookie JWT
     body: formData
   });
   
-  return await response.json();
-};
+  const result = await response.json();
+  
+  if (response.ok) {
+    console.log('Upload realizado!', result);
+    // result.hasProfilePicture === true
+    // Recarregar a página ou atualizar o componente
+  } else {
+    console.error('Erro no upload:', result.detail);
+  }
+}
 
-// Display profile picture
-const ProfileImage = ({ userId }) => (
-  <img 
-    src={`http://localhost:8001/auth/profile/picture/${userId}`}
-    alt="Profile"
-    onError={(e) => e.target.src = '/default-avatar.png'}
-  />
-);
+// Uso em HTML
+<input type="file" accept="image/*" onChange={(e) => uploadProfilePicture(e.target)} />
+```
 
-// Delete profile picture
-const deleteProfilePicture = async () => {
+#### 🗑️ Deletar Foto (requer autenticação)
+
+```javascript
+async function deleteProfilePicture() {
   const response = await fetch('http://localhost:8001/auth/profile/picture', {
     method: 'DELETE',
-    credentials: 'include'
+    credentials: 'include'  // IMPORTANTE: envia o cookie JWT
   });
   
-  return await response.json();
-};
+  const result = await response.json();
+  
+  if (response.ok) {
+    console.log('Foto removida!', result);
+    // result.hasProfilePicture === false
+    // Atualizar UI para mostrar avatar padrão
+  }
+}
+```
 
-// Check if user has profile picture
-const user = await fetch('http://localhost:8001/auth/me', {
-  credentials: 'include'
+#### 📝 Resumo para o Frontend
+
+**3 informações importantes:**
+
+1. **GET da foto é público** - não precisa de autenticação, use direto na `<img src="...">`
+2. **POST (upload) e DELETE precisam de autenticação** - use `credentials: 'include'`
+3. **Campo `hasProfilePicture`** - está presente em todos os endpoints que retornam dados do usuário:
+   - `/auth/login` → `user.hasProfilePicture`
+   - `/auth/me` → `hasProfilePicture`
+   - `/auth/register/*` → `hasProfilePicture`
+   - `/auth/profile` (após update) → `hasProfilePicture`
+
+**Fluxo completo:**
+
+```javascript
+// 1. Usuário faz login
+const loginData = await fetch('http://localhost:8001/auth/login', {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ username: 'user', password: 'pass' })
 }).then(r => r.json());
 
-if (user.hasProfilePicture) {
-  // Show profile picture
+const userId = loginData.user.id;
+const hasPhoto = loginData.user.hasProfilePicture;
+
+// 2. Exibir foto ou avatar padrão
+if (hasPhoto) {
+  imgElement.src = `http://localhost:8001/auth/profile/picture/${userId}`;
 } else {
-  // Show default avatar
+  imgElement.src = '/default-avatar.png';
 }
+
+// 3. Upload quando usuário selecionar arquivo
+// (ver código de upload acima)
+
+// 4. Após upload, atualizar UI
+// O backend retorna hasProfilePicture: true, então pode atualizar:
+imgElement.src = `http://localhost:8001/auth/profile/picture/${userId}`;
 ```
 
 ### Validations
