@@ -154,6 +154,116 @@ Once you have an admin, create more via the protected API endpoint. See full doc
 
 **All endpoints and usage examples are available in the Swagger UI.**
 
+## 📸 Profile Pictures
+
+Users can upload, retrieve, and delete profile pictures stored directly in the database.
+
+### Features
+- ✅ Upload images via multipart/form-data
+- ✅ Binary storage in PostgreSQL (BYTEA)
+- ✅ Supported formats: JPEG, JPG, PNG, GIF
+- ✅ Maximum file size: 5MB
+- ✅ Public GET endpoint (no authentication required)
+- ✅ Automatic content-type handling
+- ✅ `hasProfilePicture` flag in user responses
+
+### Endpoints
+
+**Upload Profile Picture** (requires authentication)
+```bash
+POST /auth/profile/picture
+Content-Type: multipart/form-data
+
+curl -X POST http://localhost:8001/auth/profile/picture \
+  -H "Cookie: access_token=YOUR_JWT_TOKEN" \
+  -F "file=@profile.jpg"
+
+# Response
+{
+  "message": "Profile picture uploaded successfully",
+  "hasProfilePicture": true
+}
+```
+
+**Get Profile Picture** (public)
+```bash
+GET /auth/profile/picture/{user_id}
+
+# Use directly in HTML
+<img src="http://localhost:8001/auth/profile/picture/{user_id}" alt="Profile" />
+
+# Or download with curl
+curl http://localhost:8001/auth/profile/picture/{user_id} -o profile.jpg
+```
+
+**Delete Profile Picture** (requires authentication)
+```bash
+DELETE /auth/profile/picture
+
+curl -X DELETE http://localhost:8001/auth/profile/picture \
+  -H "Cookie: access_token=YOUR_JWT_TOKEN"
+
+# Response
+{
+  "message": "Profile picture deleted successfully",
+  "hasProfilePicture": false
+}
+```
+
+### Frontend Integration
+
+```javascript
+// Upload profile picture
+const uploadProfilePicture = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await fetch('http://localhost:8001/auth/profile/picture', {
+    method: 'POST',
+    credentials: 'include',  // Send JWT cookie
+    body: formData
+  });
+  
+  return await response.json();
+};
+
+// Display profile picture
+const ProfileImage = ({ userId }) => (
+  <img 
+    src={`http://localhost:8001/auth/profile/picture/${userId}`}
+    alt="Profile"
+    onError={(e) => e.target.src = '/default-avatar.png'}
+  />
+);
+
+// Delete profile picture
+const deleteProfilePicture = async () => {
+  const response = await fetch('http://localhost:8001/auth/profile/picture', {
+    method: 'DELETE',
+    credentials: 'include'
+  });
+  
+  return await response.json();
+};
+
+// Check if user has profile picture
+const user = await fetch('http://localhost:8001/auth/me', {
+  credentials: 'include'
+}).then(r => r.json());
+
+if (user.hasProfilePicture) {
+  // Show profile picture
+} else {
+  // Show default avatar
+}
+```
+
+### Validations
+- **File size**: Maximum 5MB
+- **File types**: JPEG, JPG, PNG, GIF only
+- **Authentication**: Required for upload/delete, not required for GET
+- **Storage**: Binary data in PostgreSQL (BYTEA column)
+
 ## ⚙️ Configuration
 
 ### Environment Variables
