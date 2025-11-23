@@ -23,6 +23,7 @@ from app.auth.dependencies import get_current_user, get_current_admin_user
 from app.models.account import Account
 from app.dtos.user_dto import UserInfoResponse
 from app.services.property_relation_service import check_user_property_relation
+from app.settings import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -62,9 +63,10 @@ async def login(
     response.set_cookie(
         key="access_token",
         value=access_token,
-        httponly=True,  # Prevent XSS attacks
-        secure=False,   # Set to True in production with HTTPS
-        samesite="lax", # CSRF protection
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        domain=settings.COOKIE_DOMAIN,
         max_age=int(get_token_expiry().total_seconds())
     )
     
@@ -168,8 +170,9 @@ async def logout(response: Response):
     response.delete_cookie(
         key="access_token",
         httponly=True,
-        secure=False,  # Set to True in production with HTTPS
-        samesite="lax"
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        domain=settings.COOKIE_DOMAIN,
     )
     return {"message": "Successfully logged out"}
 

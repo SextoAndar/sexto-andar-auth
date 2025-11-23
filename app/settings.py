@@ -52,6 +52,21 @@ class Settings:
                 category=RuntimeWarning,
                 stacklevel=2
             )
+
+        # ===== Cookie Configuration =====
+        self.COOKIE_DOMAIN: str | None = os.getenv("COOKIE_DOMAIN")
+        self.COOKIE_SAMESITE: str = os.getenv("COOKIE_SAMESITE", "lax")
+        self.COOKIE_SECURE: bool = os.getenv("COOKIE_SECURE", "false").lower() in ("true", "1", "yes")
+
+        # Validate SameSite=None requires Secure=True
+        if self.COOKIE_SAMESITE.lower() == "none" and not self.COOKIE_SECURE:
+            import warnings
+            warnings.warn(
+                "⚠️  COOKIE_SAMESITE is 'none' but COOKIE_SECURE is not 'true'. "
+                "Modern browsers will reject this cookie.",
+                category=RuntimeWarning,
+                stacklevel=2
+            )
         
         # ===== Database Configuration =====
         # Use DATABASE_URL if provided, otherwise build from components
