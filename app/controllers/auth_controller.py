@@ -25,6 +25,7 @@ from app.dtos.user_dto import UserInfoResponse
 from app.services.property_relation_service import check_user_property_relation
 from app.settings import settings
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -254,39 +255,92 @@ async def get_user_by_id(
             detail="Insufficient permissions to access user information"
         )
 
-    # SECURITY: Property owners must have relation with the user
-    if current_user.is_property_owner() and not current_user.is_admin():
-        # Allow access to own information
-        if str(current_user.id) != user_id:
-            # Validate relation with properties API
-            logger.info(
-                f"Property owner {current_user.id} requesting info for user {user_id} - "
-                f"checking relation via properties API"
-            )
-            
-            has_relation = await check_user_property_relation(
-                user_id=user_id,
-                owner_id=str(current_user.id)
-            )
-            
-            if not has_relation:
-                logger.warning(
-                    f"Property owner {current_user.id} denied access to user {user_id} - "
-                    f"no relation found"
-                )
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You can only access information of users who interacted with your properties"
-                )
-            
-            logger.info(
-                f"Property owner {current_user.id} granted access to user {user_id} - "
-                f"relation validated"
-            )
-
     auth_service = AuthService(db)
-    account = auth_service.get_user_by_id(user_id)
-    return UserInfoResponse.from_account(account)
+
+    # Admins can retrieve any user's information.
+    if current_user.is_admin():
+        try:
+            account = auth_service.get_user_by_id(user_id)
+            return UserInfoResponse.from_account(account)
+        except HTTPException as e:
+            # For admin, a 404 means the user truly doesn't exist, re-raise it.
+            if e.status_code == status.HTTP_404_NOT_FOUND:
+                raise e
+            # Re-raise any other exceptions
+            raise
+
+    # For property owners, additional checks are needed
+    if current_user.is_property_owner():
+        # Allow access to own information
+        if str(current_user.id) == user_id:
+            try:
+                account = auth_service.get_user_by_id(user_id)
+                return UserInfoResponse.from_account(account)
+            except HTTPException as e:
+                # If owner queries self and not found, re-raise 404
+                if e.status_code == status.HTTP_404_NOT_FOUND:
+                    raise e
+                raise
+
+        # Validate relation with properties API
+        logger.info(
+            f"Property owner {current_user.id} requesting info for user {user_id} - "
+            f"checking relation via properties API"
+        )
+        
+        has_relation = await check_user_property_relation(
+            user_id=user_id,
+            owner_id=str(current_user.id)
+        )
+        
+        if not has_relation:
+            logger.warning(
+                f"Property owner {current_user.id} denied access to user {user_id} - "
+                f"no relation found"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only access information of users who interacted with your properties"
+            )
+        
+        logger.info(
+            f"Property owner {current_user.id} granted access to user {user_id} - "
+            f"relation validated"
+        )
+
+        # At this point, has_relation is True.
+        # Now, try to get the user from the local DB.
+        try:
+            account = auth_service.get_user_by_id(user_id)
+            return UserInfoResponse.from_account(account)
+        except HTTPException as e:
+            if e.status_code == status.HTTP_404_NOT_FOUND:
+                logger.warning(
+                    f"User {user_id} not found in local DB for Property Owner {current_user.id} "
+                    f"despite valid property relation. Returning placeholder data."
+                )
+                # Construct placeholder data as per the prompt's example
+                # and the discussion about data synchronization.
+                return UserInfoResponse(
+                    id=user_id,
+                    username=f"external_user_{user_id[:8]}", # Placeholder username
+                    fullName="External User", # Placeholder full name
+                    email=f"external-{user_id[:8]}@example.com", # Placeholder email
+                    phoneNumber="+5500900000000", # Placeholder phone number
+                    role="USER", # Assume USER role for external users
+                    createdAt=datetime.now(), # Current time for createdAt
+                    isActive=True, # Assume active
+                    hasProfilePicture=False # Assume no profile picture
+                )
+            # Re-raise any other exceptions
+            raise
+    
+    # This part should ideally not be reached given the initial authorization check,
+    # but included for defensive programming.
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Insufficient permissions to access user information"
+    )
 
 
 @router.post("/profile/picture", response_model=ProfilePictureResponse, summary="Upload or update profile picture")
