@@ -128,14 +128,10 @@ def main():
     # Check if we should force migrations
     force = len(sys.argv) > 1 and sys.argv[1] == "--force"
     
-    if not force:
-        # Check if migrations are needed
-        if check_database_status():
-            logger.info("Database appears to be up to date.")
-            response = input("Do you want to run migrations anyway? (y/N): ")
-            if response.lower() != 'y':
-                logger.info("Migration cancelled.")
-                return
+    # In an automated CI/CD environment, we just run the migrations.
+    # The migration logic is designed to be idempotent.
+    if not force and check_database_status():
+        logger.info("Database appears to be up to date, ensuring schema is fully synced.")
     
     # Run migrations
     success = run_migrations()
