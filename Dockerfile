@@ -42,7 +42,7 @@ EXPOSE 8001
 # If API_BASE_PATH is empty or "/" the path becomes "/health", otherwise
 # we append "/health" to the trimmed base path (avoids `//health` 404s).
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD sh -c 'p=${API_BASE_PATH:-/}; p=${p%/}; if [ -z "${p}" ] || [ "${p}" = "/" ]; then path="/health"; else path="${p}/health"; fi; curl -fsS -o /dev/null "http://localhost:8001${path}" || exit 1'
+    CMD sh -c 'p=${API_BASE_PATH:-/}; p=${p%/}; if [ -z "${p}" ] || [ "${p}" = "/" ]; then path="/health"; else path="${p}/health"; fi; curl -fsS -o /dev/null "http://localhost:${PORT:-8001}${path}" || exit 1'
 
-# Command to run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+# Command to run the application, using $PORT for Heroku compatibility
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8001}
