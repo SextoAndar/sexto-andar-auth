@@ -170,12 +170,13 @@ async def wait_for_database_ready(max_attempts: int = None, delay_seconds: float
 def create_tables():
     """Create all tables and apply migrations for existing structures"""
     try:
-        # Apply all necessary migrations first
-        apply_migrations()
-        
-        # Then create/update tables
+        # First, create/update tables to ensure all structures exist
         Base.metadata.create_all(bind=engine)
         logging.info("🗄️  Tables created/verified successfully")
+        
+        # Then, apply all necessary migrations for data or structure changes
+        apply_migrations()
+        
         return True
     except SQLAlchemyError as e:
         logging.error(f"❌ Error creating tables: {e}")
