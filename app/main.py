@@ -101,6 +101,9 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "https://sexto-andar-api-3ef30ad16a1f.herokuapp.com/",
+        "https://sexto-andar-auth-6def0cff0560.herokuapp.com/",
+        "https://sexto-andar-dev-proxy-d6d02970f88a.herokuapp.com/",
+        "https://sexto-andar-web-9a6357fcb391.herokuapp.com/"
     ],  # Frontend URLs - add your production URL here
     allow_credentials=True,
     allow_methods=["*"],
