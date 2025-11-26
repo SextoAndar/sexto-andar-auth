@@ -6,7 +6,8 @@ Real Estate Management API
 import logging
 import sys
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, APIRouter
+from fastapi import FastAPI, HTTPException, APIRouter, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import database functions
@@ -91,6 +92,19 @@ app = FastAPI(
     license_info=API_LICENSE_INFO,
     lifespan=lifespan
 )
+
+# Custom Exception Handler for ValueError
+@app.exception_handler(ValueError)
+async def value_error_exception_handler(request: Request, exc: ValueError):
+    """
+    Handles ValueError exceptions, which are often raised for validation errors
+    that are not covered by Pydantic. This prevents them from becoming 500 errors.
+    """
+    logger.error(f"Validation error occurred: {exc}")
+    return JSONResponse(
+        status_code=400,
+        content={"detail": str(exc)},
+    )
 
 # CORS middleware (adjust for your needs)
 app.add_middleware(
