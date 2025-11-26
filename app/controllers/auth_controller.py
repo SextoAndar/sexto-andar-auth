@@ -214,6 +214,24 @@ async def update_profile(
     updated_user = auth_service.update_profile(current_user, update_data)
     return AuthUser.model_validate(updated_user)
 
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT, summary="Delete own user account")
+async def delete_my_account(
+    current_user: Account = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Allows an authenticated user to delete their own account.
+    
+    Security:
+    - Requires authentication via JWT cookie
+    - Prevents deletion if the user is the last admin in the system
+    
+    Returns 204 No Content on success.
+    """
+    auth_service = AuthService(db)
+    auth_service.delete_own_account(current_user)
+    return None
+
 @router.post("/introspect", response_model=IntrospectResponse, summary="Validate and decode a JWT token")
 async def introspect(body: IntrospectRequest) -> IntrospectResponse:
     """

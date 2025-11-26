@@ -16,6 +16,8 @@ from app.dtos.auth_dto import (
     UpdateProfileRequest
 )
 from app.dtos.admin_dto import UpdateUserRequest
+import httpx
+from app.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -485,6 +487,33 @@ class AuthService:
             f"User '{target_user.username}' (ID: {target_user.id}, Role: {target_user.role.value}) "
             f"deleted successfully by admin '{admin.username}' (ID: {admin.id})"
         )
+
+    def delete_own_account(self, current_user: Account) -> None:
+        """
+        Allows an authenticated user to delete their own account.
+        
+        Args:
+            current_user: The authenticated user attempting to delete their account.
+            
+        Raises:
+            HTTPException: If the user tries to delete their account but is the last admin.
+        """
+        logger.info(f"User '{current_user.username}' (ID: {current_user.id}) attempting to delete their own account.")
+
+        if current_user.is_admin():
+            total_admins = self.account_repo.count_admins()
+            if total_admins <= 1:
+                logger.warning(
+                    f"Admin '{current_user.username}' attempted to delete their own account "
+                    f"but is the last admin in the system."
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cannot delete your own admin account if you are the last admin in the system."
+                )
+
+        self.account_repo.delete(current_user)
+        logger.info(f"User '{current_user.username}' (ID: {current_user.id}) successfully deleted their own account.")
     
     def upload_profile_picture(
         self, 
