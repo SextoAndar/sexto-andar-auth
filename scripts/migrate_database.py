@@ -8,22 +8,20 @@ Run this before starting the application for the first time or after model chang
 """
 
 import sys
-import os
 import logging
 from pathlib import Path
 
-# Add the app directory to the Python path
-app_dir = Path(__file__).parent.parent
-sys.path.insert(0, str(app_dir))
-
 from app.database.connection import (
-    initialize_database_sync,
     create_tables,
     apply_migrations,
     validate_models,
     SessionLocal,
     engine
 )
+
+# Add the app directory to the Python path
+app_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(app_dir))
 
 # Configure logging
 logging.basicConfig(

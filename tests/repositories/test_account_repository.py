@@ -1,8 +1,6 @@
 """
 Tests for Account repository
 """
-import pytest
-from uuid import uuid4
 from app.repositories.account_repository import AccountRepository
 from app.models.account import Account, RoleEnum
 from app.auth.password_handler import hash_password
@@ -98,10 +96,10 @@ class TestAccountRepository:
         repo = AccountRepository(db_session)
         
         # Should exist
-        assert repo.username_exists("existinguser") == True
+        assert repo.username_exists("existinguser")
         
         # Should not exist
-        assert repo.username_exists("nonexistent") == False
+        assert not repo.username_exists("nonexistent")
     
     def test_email_exists(self, db_session):
         """Test checking if email exists"""
@@ -119,10 +117,10 @@ class TestAccountRepository:
         repo = AccountRepository(db_session)
         
         # Should exist
-        assert repo.email_exists("testemail@example.com") == True
+        assert repo.email_exists("testemail@example.com")
         
         # Should not exist
-        assert repo.email_exists("nonexistent@example.com") == False
+        assert not repo.email_exists("nonexistent@example.com")
     
     def test_count_admins(self, db_session, created_admin):
         """Test counting admin users"""

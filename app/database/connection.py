@@ -11,7 +11,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 from sqlalchemy.exc import SQLAlchemyError
-import asyncpg
 from databases import Database
 import asyncio
 
@@ -328,10 +327,9 @@ def validate_models():
     """Validate all SQLAlchemy models"""
     try:
         # Import models to ensure they're registered with Base (auth-only)
-        from ..models import account
         
         # Get inspector to check database structure
-        inspector = inspect(engine)
+        inspect(engine)
         
         # Validate that all models are properly configured
         for table in Base.metadata.tables.values():

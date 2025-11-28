@@ -65,7 +65,7 @@ async def check_user_property_relation(user_id: UUID, owner_id: UUID) -> bool:
                 return False
             
             elif response.status_code == 404:
-                logger.warning(f"Properties API endpoint not found (404)")
+                logger.warning("Properties API endpoint not found (404)")
                 return False
             
             else:
@@ -89,6 +89,6 @@ async def check_user_property_relation(user_id: UUID, owner_id: UUID) -> bool:
     except Exception as e:
         logger.error(
             f"Unexpected error checking user-property relation: {e} "
-            f"(user_id={user_id}, owner_id={current_user.id})"
+            f"(user_id={user_id}, owner_id={owner_id})"
         )
         return False
