@@ -37,7 +37,7 @@ async def check_user_property_relation(user_id: UUID, owner_id: UUID) -> bool:
                 f"{settings.PROPERTIES_API_URL}/api/internal/check-user-property-relation",
                 params={
                     "user_id": str(user_id),
-                    "owner_id": str(current_user.id)
+                    "owner_id": str(owner_id)
                 },
                 headers={
                     "X-Internal-Secret": settings.INTERNAL_API_SECRET
@@ -51,12 +51,12 @@ async def check_user_property_relation(user_id: UUID, owner_id: UUID) -> bool:
                 # Log para auditoria
                 if has_relation:
                     logger.info(
-                        f"User {user_id} has relation with owner {current_user.id} "
+                        f"User {user_id} has relation with owner {owner_id} "
                         f"(visits: {data.get('has_visit', False)}, "
                         f"proposals: {data.get('has_proposal', False)})"
                     )
                 else:
-                    logger.info(f"User {user_id} has NO relation with owner {current_user.id}")
+                    logger.info(f"User {user_id} has NO relation with owner {owner_id}")
                 
                 return has_relation
             
@@ -75,14 +75,14 @@ async def check_user_property_relation(user_id: UUID, owner_id: UUID) -> bool:
     except httpx.TimeoutException:
         logger.error(
             f"Timeout connecting to properties API at {settings.PROPERTIES_API_URL} "
-            f"(user_id={user_id}, owner_id={current_user.id})"
+            f"(user_id={user_id}, owner_id={owner_id})"
         )
         return False
     
     except httpx.RequestError as e:
         logger.error(
             f"Error connecting to properties API: {e} "
-            f"(user_id={user_id}, owner_id={current_user.id})"
+            f"(user_id={user_id}, owner_id={owner_id})"
         )
         return False
     

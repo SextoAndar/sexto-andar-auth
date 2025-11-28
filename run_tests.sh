@@ -29,7 +29,7 @@ echo ""
 
 # Install test dependencies if needed
 echo "📦 Installing test dependencies..."
-pip install -q pytest pytest-asyncio pytest-cov httpx
+./venv/bin/python -m pip install -q pytest pytest-asyncio pytest-cov httpx
 echo -e "${GREEN}✅ Dependencies installed${NC}"
 echo ""
 
@@ -37,7 +37,7 @@ echo ""
 echo "🧪 Running tests..."
 echo ""
 
-if pytest "$@"; then
+if ./venv/bin/python -m pytest "$@"; then
     echo ""
     echo -e "${GREEN}=========================================${NC}"
     echo -e "${GREEN}  ✅ All tests passed!${NC}"

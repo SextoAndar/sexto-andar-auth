@@ -229,7 +229,7 @@ async def delete_my_account(
     Returns 204 No Content on success.
     """
     auth_service = AuthService(db)
-    auth_service.delete_own_account(current_user)
+    await auth_service.delete_own_account(current_user)
     return None
 
 @router.post("/introspect", response_model=IntrospectResponse, summary="Validate and decode a JWT token")

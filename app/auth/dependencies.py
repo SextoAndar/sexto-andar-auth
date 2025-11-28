@@ -2,20 +2,23 @@
 from fastapi import Depends, HTTPException, status, Cookie
 from typing import Optional, Annotated
 from sqlalchemy.orm import Session
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.database.connection import get_db
 from app.models.account import Account, RoleEnum
 from app.auth.jwt_handler import verify_token
 
+security = HTTPBearer()
+
 async def get_current_user(
-    access_token: Annotated[Optional[str], Cookie()] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> Account:
     """
-    Get current authenticated user from JWT cookie
+    Get current authenticated user from JWT token in Authorization header
     
     Args:
-        access_token: JWT token from cookie
+        credentials: HTTP Authorization credentials (Bearer token)
         db: Database session
         
     Returns:
@@ -30,8 +33,7 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    if not access_token:
-        raise credentials_exception
+    access_token = credentials.credentials
     
     # Verify token
     payload = verify_token(access_token)

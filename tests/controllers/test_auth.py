@@ -112,9 +112,6 @@ class TestLogin:
         assert data["token_type"] == "bearer"
         assert "user" in data
         assert data["user"]["username"] == test_user_data["username"]
-        
-        # Check that cookie is set
-        assert "access_token" in response.cookies
     
     def test_login_wrong_password(self, client: TestClient, created_user: dict, test_user_data: dict):
         """Test login with wrong password fails"""

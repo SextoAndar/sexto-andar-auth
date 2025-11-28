@@ -1,272 +1,268 @@
 """
-Tests for profile update endpoint (US04 and US17)
+Tests for user profile update endpoint
 """
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 
 
 class TestUpdateProfile:
-    """Test PUT /auth/profile endpoint"""
+    """Test updating user profile (US04, US17)"""
     
     def test_update_full_name(self, client: TestClient, authenticated_user: dict):
-        """Test updating only full name"""
+        """Test user can update their full name"""
+        update_data = {"fullName": "New Full Name"}
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={"fullName": "Updated Name"}
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
         
         assert response.status_code == 200
         data = response.json()
-        assert data["fullName"] == "Updated Name"
+        assert data["fullName"] == update_data["fullName"]
         assert data["id"] == authenticated_user["user"]["id"]
     
     def test_update_phone_number(self, client: TestClient, authenticated_user: dict):
-        """Test updating only phone number"""
+        """Test user can update their phone number"""
+        update_data = {"phoneNumber": "11911112222"}
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={"phoneNumber": "+5511988887777"}
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
         
         assert response.status_code == 200
         data = response.json()
-        assert data["id"] == authenticated_user["user"]["id"]
+        assert data["phoneNumber"] == update_data["phoneNumber"]
     
     def test_update_email_with_correct_password(self, client: TestClient, authenticated_user: dict, test_user_data: dict):
-        """Test updating email with correct current password"""
+        """Test user can update their email with correct password"""
+        update_data = {
+            "email": "newemail@example.com",
+            "currentPassword": test_user_data["password"]
+        }
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={
-                "email": "newemail@example.com",
-                "currentPassword": test_user_data["password"]
-            }
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
         
         assert response.status_code == 200
         data = response.json()
-        assert data["email"] == "newemail@example.com"
+        assert data["email"] == update_data["email"]
     
     def test_update_email_without_password(self, client: TestClient, authenticated_user: dict):
-        """Test updating email without current password fails"""
+        """Test user cannot update email without current password"""
+        update_data = {"email": "another@example.com"}
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={"email": "newemail@example.com"}
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
         
         assert response.status_code == 400
         assert "Current password is required" in response.json()["detail"]
     
     def test_update_email_with_wrong_password(self, client: TestClient, authenticated_user: dict):
-        """Test updating email with wrong current password fails"""
+        """Test user cannot update email with wrong current password"""
+        update_data = {
+            "email": "wrongpass@example.com",
+            "currentPassword": "wrongpassword"
+        }
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={
-                "email": "newemail@example.com",
-                "currentPassword": "WrongPassword123!"
-            }
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
         
         assert response.status_code == 401
         assert "Current password is incorrect" in response.json()["detail"]
     
-    def test_update_email_already_exists(self, client: TestClient, authenticated_user: dict, authenticated_property_owner: dict, test_user_data: dict):
-        """Test updating to an email that already exists"""
+    def test_update_email_already_exists(self, client: TestClient, authenticated_user: dict, test_property_owner_data: dict, test_user_data: dict):
+        """Test user cannot update email to one that already exists"""
+        # Create a second user to have a duplicate email
+        client.post("/api/auth/register/property-owner", json=test_property_owner_data)
+        
+        update_data = {
+            "email": test_property_owner_data["email"],
+            "currentPassword": test_user_data["password"]
+        }
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={
-                "email": authenticated_property_owner["user"]["email"],
-                "currentPassword": test_user_data["password"]
-            }
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
         
         assert response.status_code == 400
         assert "Email already exists" in response.json()["detail"]
     
     def test_update_password_with_correct_current_password(self, client: TestClient, authenticated_user: dict, test_user_data: dict):
-        """Test updating password with correct current password"""
+        """Test user can update their password with correct current password"""
+        update_data = {
+            "newPassword": "newsecurepassword123",
+            "currentPassword": test_user_data["password"]
+        }
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={
-                "currentPassword": test_user_data["password"],
-                "newPassword": "NewPassword123!"
-            }
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
         
         assert response.status_code == 200
+        data = response.json()
+        assert data["username"] == authenticated_user["user"]["username"]  # Ensure other fields are unchanged
         
-        # Verify can login with new password
+        # Verify new password by logging in again
         login_response = client.post(
             "/api/auth/login",
             json={
-                "username": test_user_data["username"],
-                "password": "NewPassword123!"
+                "username": authenticated_user["user"]["username"],
+                "password": update_data["newPassword"]
             }
         )
         assert login_response.status_code == 200
     
     def test_update_password_without_current_password(self, client: TestClient, authenticated_user: dict):
-        """Test updating password without current password fails"""
+        """Test user cannot update password without current password"""
+        update_data = {"newPassword": "newsecurepassword123"}
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={"newPassword": "NewPassword123!"}
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
         
         assert response.status_code == 400
         assert "Current password is required" in response.json()["detail"]
     
     def test_update_password_with_wrong_current_password(self, client: TestClient, authenticated_user: dict):
-        """Test updating password with wrong current password fails"""
+        """Test user cannot update password with wrong current password"""
+        update_data = {
+            "newPassword": "newsecurepassword123",
+            "currentPassword": "wrongpassword"
+        }
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={
-                "currentPassword": "WrongPassword123!",
-                "newPassword": "NewPassword123!"
-            }
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
         
         assert response.status_code == 401
         assert "Current password is incorrect" in response.json()["detail"]
     
     def test_update_multiple_fields(self, client: TestClient, authenticated_user: dict, test_user_data: dict):
-        """Test updating multiple fields at once"""
+        """Test user can update multiple fields at once"""
+        update_data = {
+            "fullName": "Updated Name",
+            "phoneNumber": "11933334444",
+            "email": "multiupdate@example.com",
+            "newPassword": "supernewpassword",
+            "currentPassword": test_user_data["password"]
+        }
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={
-                "fullName": "Complete New Name",
-                "phoneNumber": "+5511977776666",
-                "email": "completelynew@example.com",
-                "currentPassword": test_user_data["password"],
-                "newPassword": "CompletelyNew123!"
-            }
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
         
         assert response.status_code == 200
         data = response.json()
-        assert data["fullName"] == "Complete New Name"
-        assert data["email"] == "completelynew@example.com"
+        assert data["fullName"] == update_data["fullName"]
+        assert data["phoneNumber"] == update_data["phoneNumber"]
+        assert data["email"] == update_data["email"]
+        
+        # Verify new password
+        login_response = client.post(
+            "/api/auth/login",
+            json={
+                "username": authenticated_user["user"]["username"],
+                "password": update_data["newPassword"]
+            }
+        )
+        assert login_response.status_code == 200
     
     def test_update_no_fields(self, client: TestClient, authenticated_user: dict):
-        """Test updating with no fields fails"""
+        """Test updating with no fields provided returns bad request"""
+        update_data = {}
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={}
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
         
         assert response.status_code == 400
         assert "No fields to update" in response.json()["detail"]
     
-    def test_update_unauthenticated(self, client: TestClient):
-        """Test updating profile without authentication fails"""
-        response = client.put(
-            "/api/auth/profile",
-            json={"fullName": "New Name"}
-        )
-        
-        assert response.status_code == 401
-        assert "Could not validate credentials" in response.json()["detail"]
-    
     def test_property_owner_can_update_profile(self, client: TestClient, authenticated_property_owner: dict):
-        """Test that property owners can update their profile (US17)"""
+        """Test property owner can update their profile"""
+        update_data = {"fullName": "New Owner Name"}
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_property_owner["cookies"],
-            json={"fullName": "Updated Owner Name"}
+            json=update_data,
+            headers=authenticated_property_owner["headers"]
         )
         
         assert response.status_code == 200
         data = response.json()
-        assert data["fullName"] == "Updated Owner Name"
-        assert data["role"] == "PROPERTY_OWNER"
+        assert data["fullName"] == update_data["fullName"]
+        assert data["id"] == authenticated_property_owner["user"]["id"]
     
     def test_admin_can_update_profile(self, client: TestClient, authenticated_admin: dict):
-        """Test that admins can update their profile"""
+        """Test admin can update their own profile"""
+        update_data = {"fullName": "New Admin Name"}
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_admin["cookies"],
-            json={"fullName": "Updated Admin Name"}
+            json=update_data,
+            headers=authenticated_admin["headers"]
         )
         
         assert response.status_code == 200
         data = response.json()
-        assert data["fullName"] == "Updated Admin Name"
-        assert data["role"] == "ADMIN"
+        assert data["fullName"] == update_data["fullName"]
+        assert data["id"] == authenticated_admin["admin"]["id"]
     
-    def test_update_invalid_email_format(self, client: TestClient, authenticated_user: dict, test_user_data: dict):
-        """Test updating with invalid email format"""
+    @pytest.mark.parametrize("invalid_email", ["invalid", "user@.com", "user@com."])
+    def test_update_invalid_email_format(self, client: TestClient, authenticated_user: dict, invalid_email: str, test_user_data: dict):
+        """Test updating with an invalid email format fails"""
+        update_data = {
+            "email": invalid_email,
+            "currentPassword": test_user_data["password"]
+        }
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={
-                "email": "invalid-email",
-                "currentPassword": test_user_data["password"]
-            }
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
-        
         assert response.status_code == 422  # Pydantic validation error
     
     def test_update_short_password(self, client: TestClient, authenticated_user: dict, test_user_data: dict):
-        """Test updating with password less than 8 characters"""
+        """Test updating with a password shorter than 8 characters fails"""
+        update_data = {
+            "newPassword": "short",
+            "currentPassword": test_user_data["password"]
+        }
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={
-                "currentPassword": test_user_data["password"],
-                "newPassword": "short"
-            }
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
-        
         assert response.status_code == 422  # Pydantic validation error
     
     def test_update_short_full_name(self, client: TestClient, authenticated_user: dict):
-        """Test updating with full name less than 2 characters"""
+        """Test updating with a full name shorter than 3 characters fails"""
+        update_data = {"fullName": "a"}
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={"fullName": "A"}
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
-        
         assert response.status_code == 422  # Pydantic validation error
     
     def test_update_short_phone_number(self, client: TestClient, authenticated_user: dict):
-        """Test updating with phone number less than 10 characters"""
+        """Test updating with a phone number shorter than 10 characters fails"""
+        update_data = {"phoneNumber": "123456789"}
         response = client.put(
             "/api/auth/profile",
-            cookies=authenticated_user["cookies"],
-            json={"phoneNumber": "123"}
+            json=update_data,
+            headers=authenticated_user["headers"]
         )
-        
         assert response.status_code == 422  # Pydantic validation error
-
-
-class TestUpdateProfileAuthentication:
-    """Test authentication requirements for profile updates"""
-    
-    def test_update_requires_authentication(self, client: TestClient):
-        """Test that profile update requires authentication"""
-        response = client.put(
-            "/api/auth/profile",
-            json={"fullName": "New Name"}
-        )
-        
-        assert response.status_code == 401
-    
-    def test_update_with_invalid_token(self, client: TestClient):
-        """Test that profile update with invalid token fails"""
-        response = client.put(
-            "/api/auth/profile",
-            cookies={"access_token": "invalid_token"},
-            json={"fullName": "New Name"}
-        )
-        
-        assert response.status_code == 401

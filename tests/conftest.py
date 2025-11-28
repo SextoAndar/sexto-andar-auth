@@ -151,7 +151,7 @@ def created_admin(client: TestClient, test_admin_data: dict, db_session: Session
 
 @pytest.fixture
 def authenticated_user(client: TestClient, created_user: dict, test_user_data: dict):
-    """Create and authenticate a user, return cookies"""
+    """Create and authenticate a user, return auth headers"""
     login_response = client.post(
         "/api/auth/login",
         json={
@@ -160,16 +160,16 @@ def authenticated_user(client: TestClient, created_user: dict, test_user_data: d
         }
     )
     assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
     return {
         "user": created_user,
-        "cookies": login_response.cookies,
-        "token": login_response.json()["access_token"]
+        "headers": {"Authorization": f"Bearer {token}"}
     }
 
 
 @pytest.fixture
 def authenticated_admin(client: TestClient, created_admin: dict):
-    """Create and authenticate an admin, return cookies"""
+    """Create and authenticate an admin, return auth headers"""
     login_response = client.post(
         "/api/auth/login",
         json={
@@ -178,10 +178,10 @@ def authenticated_admin(client: TestClient, created_admin: dict):
         }
     )
     assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
     return {
         "admin": created_admin,
-        "cookies": login_response.cookies,
-        "token": login_response.json()["access_token"]
+        "headers": {"Authorization": f"Bearer {token}"}
     }
 
 
@@ -195,7 +195,7 @@ def created_property_owner(client: TestClient, test_property_owner_data: dict):
 
 @pytest.fixture
 def authenticated_property_owner(client: TestClient, created_property_owner: dict, test_property_owner_data: dict):
-    """Create and authenticate a property owner, return cookies"""
+    """Create and authenticate a property owner, return auth headers"""
     login_response = client.post(
         "/api/auth/login",
         json={
@@ -204,9 +204,9 @@ def authenticated_property_owner(client: TestClient, created_property_owner: dic
         }
     )
     assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
     return {
         "user": created_property_owner,
-        "cookies": login_response.cookies,
-        "token": login_response.json()["access_token"]
+        "headers": {"Authorization": f"Bearer {token}"}
     }
 

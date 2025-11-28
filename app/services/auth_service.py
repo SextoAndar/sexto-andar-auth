@@ -18,6 +18,7 @@ from app.dtos.auth_dto import (
 from app.dtos.admin_dto import UpdateUserRequest
 import httpx
 from app.settings import settings
+from app.services.webhook_service import webhook_service
 
 logger = logging.getLogger(__name__)
 
@@ -448,7 +449,7 @@ class AuthService:
         
         return updated_user
     
-    def admin_delete_user(self, user_id: str, admin: Account) -> None:
+    async def admin_delete_user(self, user_id: str, admin: Account) -> None:
         """
         Admin deletes a user account (US27, US30)
         
@@ -481,14 +482,18 @@ class AuthService:
             )
         
         # Delete the user
+        user_id_to_notify = target_user.id
         self.account_repo.delete(target_user)
+
+        # Notify external services via webhook
+        await webhook_service.send_user_deleted_webhook(user_id=user_id_to_notify)
         
         logger.info(
-            f"User '{target_user.username}' (ID: {target_user.id}, Role: {target_user.role.value}) "
+            f"User '{target_user.username}' (ID: {user_id_to_notify}, Role: {target_user.role.value}) "
             f"deleted successfully by admin '{admin.username}' (ID: {admin.id})"
         )
 
-    def delete_own_account(self, current_user: Account) -> None:
+    async def delete_own_account(self, current_user: Account) -> None:
         """
         Allows an authenticated user to delete their own account.
         
@@ -512,8 +517,12 @@ class AuthService:
                     detail="Cannot delete your own admin account if you are the last admin in the system."
                 )
 
+        user_id_to_notify = current_user.id
         self.account_repo.delete(current_user)
-        logger.info(f"User '{current_user.username}' (ID: {current_user.id}) successfully deleted their own account.")
+
+        # Notify external services via webhook
+        await webhook_service.send_user_deleted_webhook(user_id=user_id_to_notify)
+        logger.info(f"User '{current_user.username}' (ID: {user_id_to_notify}) successfully deleted their own account.")
     
     def upload_profile_picture(
         self, 

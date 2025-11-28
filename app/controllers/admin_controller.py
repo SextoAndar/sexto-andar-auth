@@ -199,7 +199,7 @@ async def delete_user(
     Returns 204 No Content on success.
     """
     auth_service = AuthService(db)
-    auth_service.admin_delete_user(user_id, current_admin)
+    await auth_service.admin_delete_user(user_id, current_admin)
     return None
 
 
@@ -227,7 +227,7 @@ async def delete_property_owner(
     Returns 204 No Content on success.
     """
     auth_service = AuthService(db)
-    auth_service.admin_delete_user(owner_id, current_admin)
+    await auth_service.admin_delete_user(owner_id, current_admin)
     return None
 
 
