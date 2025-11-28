@@ -81,4 +81,4 @@ class TestGetUserById:
         """Unauthenticated users should not be able to access the admin user retrieval endpoint"""
         user_id = created_user["id"]
         response = client.get(f"/api/auth/admin/users/{user_id}")
-        assert response.status_code == 403
+        assert response.status_code == 401

@@ -66,7 +66,7 @@ class TestAdminCreateEndpoint:
             json=new_admin_data
         )
         
-        assert response.status_code == 403
+        assert response.status_code == 401
     
     def test_create_admin_duplicate_username(self, client: TestClient, authenticated_admin: dict):
         """Test cannot create admin with duplicate username"""
@@ -141,8 +141,7 @@ class TestAdminDeleteEndpoint:
         response = client.delete(
             f"/api/auth/admin/delete-admin/{created_admin['id']}"
         )
-        
-        assert response.status_code == 403
+        assert response.status_code == 401
     
     def test_delete_nonexistent_admin(self, client: TestClient, authenticated_admin: dict):
         """Test deleting nonexistent admin fails"""

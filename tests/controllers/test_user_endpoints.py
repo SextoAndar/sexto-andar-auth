@@ -16,7 +16,7 @@ class TestMeEndpoint:
     def test_me_unauthenticated(self, client: TestClient):
         """Test unauthenticated user cannot access /me"""
         response = client.get("/api/auth/me")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
 
 class TestLogout:

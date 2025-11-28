@@ -8,24 +8,27 @@ from app.database.connection import get_db
 from app.models.account import Account, RoleEnum
 from app.auth.jwt_handler import verify_token
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    header_credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    cookie_credentials: Optional[str] = Cookie(None, alias="access_token"),
     db: Session = Depends(get_db)
 ) -> Account:
     """
-    Get current authenticated user from JWT token in Authorization header
+    Get current authenticated user from JWT token.
+    Prioritizes 'Authorization: Bearer' header, falls back to 'access_token' cookie.
     
     Args:
-        credentials: HTTP Authorization credentials (Bearer token)
-        db: Database session
+        header_credentials: HTTP Authorization credentials (Bearer token).
+        cookie_credentials: JWT token from 'access_token' cookie.
+        db: Database session.
         
     Returns:
-        Current authenticated user
+        Current authenticated user.
         
     Raises:
-        HTTPException: If token is invalid or user not found
+        HTTPException: If token is invalid or user not found.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -33,8 +36,15 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    access_token = credentials.credentials
-    
+    access_token = None
+    if header_credentials:
+        access_token = header_credentials.credentials
+    elif cookie_credentials:
+        access_token = cookie_credentials
+
+    if not access_token:
+        raise credentials_exception
+
     # Verify token
     payload = verify_token(access_token)
     if not payload:
