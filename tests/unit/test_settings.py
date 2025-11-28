@@ -1,7 +1,6 @@
 """
 Tests for Settings configuration
 """
-import pytest
 import os
 from app.settings import Settings
 
@@ -71,7 +70,6 @@ class TestSettings:
     
     def test_empty_api_base_path_uses_root(self):
         """Test that empty API_BASE_PATH in env results in '/' """
-        import os
         original = os.environ.get("API_BASE_PATH")
         
         try:

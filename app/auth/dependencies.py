@@ -1,11 +1,11 @@
 # app/auth/dependencies.py
 from fastapi import Depends, HTTPException, status, Cookie
-from typing import Optional, Annotated
+from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.database.connection import get_db
-from app.models.account import Account, RoleEnum
+from app.models.account import Account
 from app.auth.jwt_handler import verify_token
 
 security = HTTPBearer(auto_error=False)

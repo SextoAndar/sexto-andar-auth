@@ -1,7 +1,6 @@
 # app/repositories/account_repository.py
 from typing import Optional, List, Tuple
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.models.account import Account, RoleEnum
 

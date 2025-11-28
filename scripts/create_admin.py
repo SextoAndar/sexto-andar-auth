@@ -79,7 +79,7 @@ async def create_admin(username, full_name, email, password, phone_number=None):
         print(f"   Full Name: {full_name}")
         print(f"   Email: {email}")
         print(f"   Phone: {phone_number or 'Not provided'}")
-        print(f"   Role: Administrator")
+        print("   Role: Administrator")
         print()
         
         # Create admin user

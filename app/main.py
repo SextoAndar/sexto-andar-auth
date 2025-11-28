@@ -19,7 +19,6 @@ from app.database.connection import (
 )
 
 # Import models (register only auth-related models)
-from app.models import Account
 
 # Import controllers/routers (auth only)
 from app.controllers.auth_controller import router as auth_router

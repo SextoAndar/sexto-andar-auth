@@ -4,11 +4,10 @@ Pytest configuration and fixtures
 import os
 import pytest
 import asyncio
-from typing import Generator, AsyncGenerator
+from typing import Generator
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from databases import Database
 
 # Set test environment variables before importing app
 os.environ["DATABASE_URL"] = "postgresql://sexto_andar_user:sexto_andar_pass@localhost:5432/sexto_andar_test_db"
@@ -19,7 +18,7 @@ os.environ["API_BASE_PATH"] = "/api"
 os.environ["SQL_DEBUG"] = "false"
 
 from app.main import app
-from app.database.connection import get_db, database
+from app.database.connection import get_db
 from app.models.base import Base
 from app.models.account import Account
 
@@ -122,7 +121,7 @@ def created_user(client: TestClient, test_user_data: dict):
 def created_admin(client: TestClient, test_admin_data: dict, db_session: Session):
     """Create a test admin directly in the database"""
     from app.repositories.account_repository import AccountRepository
-    from app.models.account import Account, RoleEnum
+    from app.models.account import RoleEnum
     from app.auth.password_handler import hash_password
     
     account_repo = AccountRepository(db_session)

@@ -1,7 +1,6 @@
 """
 Tests for authentication endpoints (register and login)
 """
-import pytest
 from fastapi.testclient import TestClient
 
 

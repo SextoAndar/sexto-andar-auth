@@ -2,7 +2,7 @@
 from sqlalchemy import Column, String, DateTime, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import validates
-from sqlalchemy_utils import EmailType, PhoneNumberType
+from sqlalchemy_utils import EmailType
 from sqlalchemy.types import LargeBinary
 from datetime import datetime, timezone
 import uuid

@@ -1,5 +1,5 @@
 # app/services/auth_service.py
-from typing import Optional, Dict, Any
+from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 import logging
@@ -16,8 +16,6 @@ from app.dtos.auth_dto import (
     UpdateProfileRequest
 )
 from app.dtos.admin_dto import UpdateUserRequest
-import httpx
-from app.settings import settings
 from app.services.webhook_service import webhook_service
 
 logger = logging.getLogger(__name__)
@@ -278,7 +276,7 @@ class AuthService:
         total_admins = self.account_repo.count_admins()
         if total_admins <= 1:
             logger.warning(
-                f"Admin deletion failed: cannot delete last admin in the system"
+                "Admin deletion failed: cannot delete last admin in the system"
             )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
