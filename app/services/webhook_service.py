@@ -5,15 +5,13 @@ import logging
 import httpx
 from uuid import UUID
 
+from app.settings import settings
+
 # Configure logger
 logger = logging.getLogger(__name__)
 
 # Hardcoded webhook URL as per user's instruction
 WEBHOOK_URL = "https://sexto-andar-api-3ef30ad16a1f.herokuapp.com/api/internal/user-deleted-webhook"
-
-# Placeholder for the internal API secret.
-# In a real-world scenario, this MUST be loaded from a secure environment variable.
-INTERNAL_API_SECRET = "your-internal-api-secret-placeholder"
 
 
 class WebhookService:
@@ -31,7 +29,9 @@ class WebhookService:
         Args:
             user_id: The UUID of the user who was deleted.
         """
-        if not WEBHOOK_URL or not INTERNAL_API_SECRET:
+        api_secret = settings.INTERNAL_API_SECRET
+
+        if not WEBHOOK_URL or not api_secret:
             logger.warning(
                 "WEBHOOK_URL or INTERNAL_API_SECRET is not configured. "
                 "Skipping webhook call."
@@ -39,7 +39,7 @@ class WebhookService:
             return
 
         headers = {
-            "X-Internal-Secret": INTERNAL_API_SECRET
+            "X-Internal-Secret": api_secret
         }
         payload = {
             "user_id": str(user_id)
